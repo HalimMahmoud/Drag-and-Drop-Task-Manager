@@ -5,14 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc --noEmit && vite build",
     "preview": "vite preview"
   },
   "dependencies": {
     "@atlaskit/pragmatic-drag-and-drop": "latest",
+    "@atlaskit/pragmatic-drag-and-drop-flourish": "latest",
     "@atlaskit/pragmatic-drag-and-drop-hitbox": "latest",
     "@atlaskit/pragmatic-drag-and-drop-live-region": "latest",
-    "@atlaskit/pragmatic-drag-and-drop-flourish": "latest",
+    "nanoid": "^6.0.1",
     "react": "latest",
     "react-dom": "latest",
     "tiny-invariant": "latest"
