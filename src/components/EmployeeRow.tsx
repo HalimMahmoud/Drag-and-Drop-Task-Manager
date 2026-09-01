@@ -7,6 +7,7 @@ import { getReorderDestinationIndex } from '@atlaskit/pragmatic-drag-and-drop-hi
 import { isTask, isRow, type Employee, type Task, type DragData } from '../types';
 import { TIMELINE_HOURS, findNearestValidStartHour, snapToHour } from '../utils/board';
 import TaskCard from '../components/TaskCard';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 interface EmployeeRowProps {
   employee: Employee;
@@ -150,7 +151,9 @@ function EmployeeRow({
       ].filter(Boolean).join(' ')}
     >
       <div className="employee">
-        <div className="employee__avatar">{employee.name.charAt(0)}</div>
+        <Avatar>
+          <AvatarFallback>{employee.name.charAt(0)}</AvatarFallback>
+        </Avatar>
         <div>
           <div className="employee__name">{employee.name}</div>
           <div className="employee__role">{employee.role}</div>

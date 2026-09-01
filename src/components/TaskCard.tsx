@@ -8,6 +8,7 @@ import {
   PRIORITY_COLORS,
   formatHour,
 } from '../utils/board';
+import { Badge } from '@/components/ui/badge';
 
 interface TaskCardProps {
   task: Task;
@@ -126,9 +127,9 @@ const TaskCard = ({ task, rowTasks, onResize }: TaskCardProps) => {
       />
 
       <div className="task__top">
-        <span className={`priority priority--${task.priority.toLowerCase()}`}>
+        <Badge variant={task.priority.toLowerCase() as 'high' | 'medium' | 'low'}>
           {task.priority}
-        </span>
+        </Badge>
         <span className="task__id">#{task.id}</span>
       </div>
 
