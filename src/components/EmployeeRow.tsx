@@ -1,13 +1,13 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { combine } from '@atlaskit/pragmatic-drag-and-drop/combine';
 import { draggable, dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
 import { attachClosestEdge, extractClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge';
 import type { Edge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/types';
-import { getReorderDestinationIndex } from '@atlaskit/pragmatic-drag-and-drop-hitbox/util/get-reorder-destination-index';
-import { isTask, isRow, type Employee, type Task, type DragData } from '../types';
+import { isTask, isRow, type DragData, type Employee, type Task } from '../types';
 import { TIMELINE_HOURS, findNearestValidStartHour, snapToHour } from '../utils/board';
 import TaskCard from '../components/TaskCard';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { ItemMenu } from '@/components/ItemMenu';
 
 interface EmployeeRowProps {
   employee: Employee;
@@ -15,6 +15,10 @@ interface EmployeeRowProps {
   onPlaceTask: (taskId: string, employeeId: string, startHour: number) => void;
   onReorderRow: (sourceId: string, destinationId: string, edge: Edge | null) => void;
   onResizeTask: (taskId: string, durationHours: number, startHour: number) => void;
+  onEditTask: (task: Task) => void;
+  onDeleteTask: (task: Task) => void;
+  onEditEmployee: (employee: Employee) => void;
+  onDeleteEmployee: (employee: Employee) => void;
 }
 
 function EmployeeRow({
@@ -23,8 +27,13 @@ function EmployeeRow({
   onPlaceTask,
   onReorderRow,
   onResizeTask,
+  onEditTask,
+  onDeleteTask,
+  onEditEmployee,
+  onDeleteEmployee,
 }: EmployeeRowProps) {
   const rowRef = useRef<HTMLDivElement>(null);
+  const dragHandleRef = useRef<HTMLDivElement>(null);
   const taskAreaRef = useRef<HTMLDivElement>(null);
   const [isRowOver, setIsRowOver] = useState(false);
   const [rowEdge, setRowEdge] = useState<Edge | null>(null);
@@ -41,6 +50,7 @@ function EmployeeRow({
     return combine(
       draggable({
         element: row,
+        ...(dragHandleRef.current ? { dragHandle: dragHandleRef.current } : {}),
         getInitialData: () => ({ type: 'row', employeeId: employee.id } satisfies DragData),
       }),
 
@@ -51,15 +61,15 @@ function EmployeeRow({
             { type: 'row', employeeId: employee.id },
             { input, element: el, allowedEdges: ['left', 'right'] },
           ),
-        canDrop: ({ source }) => source.data.type === 'row',
+        canDrop: ({ source }) => isRow(source.data),
         onDragEnter: ({ source, self }) => {
-          if (source.data.type === 'row') {
+          if (isRow(source.data)) {
             setIsRowOver(true);
             setRowEdge(extractClosestEdge(self.data));
           }
         },
         onDrag: ({ source, self }) => {
-          if (source.data.type === 'row') setRowEdge(extractClosestEdge(self.data));
+          if (isRow(source.data)) setRowEdge(extractClosestEdge(self.data));
         },
         onDragLeave: () => {
           setIsRowOver(false);
@@ -68,8 +78,9 @@ function EmployeeRow({
         onDrop: ({ source, self }) => {
           setIsRowOver(false);
           setRowEdge(null);
-          if (isRow(source.data)) {
-            onReorderRow(source.data.employeeId, employee.id, extractClosestEdge(self.data));
+          const data = source.data;
+          if (isRow(data)) {
+            onReorderRow(data.employeeId, employee.id, extractClosestEdge(self.data));
           }
         },
       }),
@@ -77,37 +88,47 @@ function EmployeeRow({
       dropTargetForElements({
         element: taskArea,
         canDrop: ({ input, source, element }) => {
-          if (source.data.type !== 'task') return false;
+          const data = source.data;
+          if (!isTask(data)) return false;
           const rect = element.getBoundingClientRect();
-          const dragOffsetX =
-            typeof source.data.dragOffsetX === 'number' ? source.data.dragOffsetX : 0;
-          const durationHours =
-            typeof source.data.durationHours === 'number' ? source.data.durationHours : 1;
-          const taskId =
-            typeof source.data.taskId === 'string' ? source.data.taskId : '';
-          const rawHour = snapToHour(input.clientX, rect, dragOffsetX, durationHours);
-          const otherTasks = stableTasksRef.current.filter(
-            (t) => t.employeeId === employee.id && t.id !== taskId,
+          const rawHour = snapToHour(
+            input.clientX,
+            rect,
+            data.dragOffsetX,
+            data.durationHours,
           );
-          return findNearestValidStartHour(rawHour, durationHours, otherTasks) !== null;
+          const otherTasks = stableTasksRef.current.filter(
+            (t) => t.employeeId === employee.id && t.id !== data.taskId,
+          );
+          return findNearestValidStartHour(rawHour, data.durationHours, otherTasks) !== null;
         },
         getDropEffect: () => 'move',
 
         getData: ({ input, source }) => {
+          const data = source.data;
+          if (!isTask(data)) {
+            return {
+              type: 'task-area' as const,
+              employeeId: employee.id,
+              targetStartHour: null,
+            };
+          }
           const rect = taskArea.getBoundingClientRect();
-          const dragOffsetX =
-            typeof source.data.dragOffsetX === 'number' ? source.data.dragOffsetX : 0;
-          const durationHours =
-            typeof source.data.durationHours === 'number' ? source.data.durationHours : 1;
-          const taskId =
-            typeof source.data.taskId === 'string' ? source.data.taskId : '';
-
-          const rawHour = snapToHour(input.clientX, rect, dragOffsetX, durationHours);
-          const otherTasks = stableTasksRef.current.filter((t) => t.id !== taskId);
-          const targetStartHour = findNearestValidStartHour(rawHour, durationHours, otherTasks);
+          const rawHour = snapToHour(
+            input.clientX,
+            rect,
+            data.dragOffsetX,
+            data.durationHours,
+          );
+          const otherTasks = stableTasksRef.current.filter((t) => t.id !== data.taskId);
+          const targetStartHour = findNearestValidStartHour(
+            rawHour,
+            data.durationHours,
+            otherTasks,
+          );
 
           return {
-            type: 'task-area',
+            type: 'task-area' as const,
             employeeId: employee.id,
             targetStartHour,
           };
@@ -115,12 +136,12 @@ function EmployeeRow({
 
         onDragEnter: ({ self }) => {
           setIsRowOver(true);
-          const h = self.data.targetStartHour;
-          setDropIndicatorHour(typeof h === 'number' ? h : null);
+          const targetStartHour = self.data['targetStartHour'];
+          setDropIndicatorHour(typeof targetStartHour === 'number' ? targetStartHour : null);
         },
         onDrag: ({ self }) => {
-          const h = self.data.targetStartHour;
-          setDropIndicatorHour(typeof h === 'number' ? h : null);
+          const targetStartHour = self.data['targetStartHour'];
+          setDropIndicatorHour(typeof targetStartHour === 'number' ? targetStartHour : null);
         },
         onDragLeave: () => {
           setIsRowOver(false);
@@ -129,10 +150,11 @@ function EmployeeRow({
         onDrop: ({ source, self }) => {
           setIsRowOver(false);
           setDropIndicatorHour(null);
-          if (isTask(source.data)) {
-            const h = self.data.targetStartHour;
-            if (typeof h === 'number') {
-              onPlaceTask(source.data.taskId, employee.id, h);
+          const data = source.data;
+          if (isTask(data)) {
+            const targetStartHour = self.data['targetStartHour'];
+            if (typeof targetStartHour === 'number') {
+              onPlaceTask(data.taskId, employee.id, targetStartHour);
             }
           }
         },
@@ -151,13 +173,16 @@ function EmployeeRow({
       ].filter(Boolean).join(' ')}
     >
       <div className="employee">
-        <Avatar>
-          <AvatarFallback>{employee.name.charAt(0)}</AvatarFallback>
-        </Avatar>
-        <div>
-          <div className="employee__name">{employee.name}</div>
-          <div className="employee__role">{employee.role}</div>
+        <div ref={dragHandleRef}>
+          <Avatar>
+            <AvatarFallback>{employee.name.charAt(0)}</AvatarFallback>
+          </Avatar>
+          <div>
+            <div className="employee__name">{employee.name}</div>
+            <div className="employee__role">{employee.role}</div>
+          </div>
         </div>
+        <ItemMenu onEdit={() => onEditEmployee(employee)} onDelete={() => onDeleteEmployee(employee)} />
       </div>
 
       <div ref={taskAreaRef} className="task-area">
@@ -167,6 +192,8 @@ function EmployeeRow({
             task={task}
             rowTasks={tasks}
             onResize={onResizeTask}
+            onEditTask={onEditTask}
+            onDeleteTask={onDeleteTask}
           />
         ))}
 

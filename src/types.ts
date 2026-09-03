@@ -1,17 +1,29 @@
-export type Employee = {
+export type Priority = 'Low' | 'Medium' | 'High';
+export type PriorityColorKey = Lowercase<Priority>;
+
+export interface PriorityColors {
+  bg: string;
+  border: string;
+  dim: string;
+}
+
+export interface Employee {
   id: string;
   name: string;
   role: string;
-};
+  color?: string;
+}
 
-export type Task = {
+export interface Task {
   id: string;
   employeeId: string;
   title: string;
-  priority: 'Low' | 'Medium' | 'High';
+  description?: string;
+  priority: Priority;
   durationHours: number;
   startHour: number;
-};
+  color?: string;
+}
 
 export type DragData =
   | {
@@ -24,8 +36,8 @@ export type DragData =
     }
   | { type: 'row'; employeeId: string };
 
-export const isTask = (v: Record<string, unknown>): v is DragData & { type: 'task' } =>
-  v.type === 'task';
+export const isTask = (v: unknown): v is DragData & { type: 'task' } =>
+  typeof v === 'object' && v !== null && (v as Record<string, unknown>)['type'] === 'task';
 
-export const isRow = (v: Record<string, unknown>): v is DragData & { type: 'row' } =>
-  v.type === 'row';
+export const isRow = (v: unknown): v is DragData & { type: 'row' } =>
+  typeof v === 'object' && v !== null && (v as Record<string, unknown>)['type'] === 'row';

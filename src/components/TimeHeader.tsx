@@ -1,4 +1,3 @@
-import React from 'react';
 import { TIMELINE_HOURS, formatHour } from '../utils/board';
 
 export default function TimeHeader() {

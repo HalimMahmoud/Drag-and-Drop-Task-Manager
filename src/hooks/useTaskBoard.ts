@@ -19,6 +19,10 @@ export interface UseTaskBoardReturn {
   reorderEmployees: (sourceId: string, destinationId: string, edge: Edge | null) => void;
   resizeTask: (taskId: string, durationHours: number, startHour: number) => void;
   tasksForEmployee: (employeeId: string) => Task[];
+  updateTask: (taskId: string, updates: Partial<Omit<Task, 'id'>>) => void;
+  deleteTask: (taskId: string) => void;
+  updateEmployee: (employeeId: string, updates: Partial<Omit<Employee, 'id'>>) => void;
+  deleteEmployee: (employeeId: string) => void;
 }
 
 export function useTaskBoard(initialEmployees: Employee[], initialTasks: Task[]): UseTaskBoardReturn {
@@ -82,7 +86,8 @@ export function useTaskBoard(initialEmployees: Employee[], initialTasks: Task[])
       });
 
       const next = [...current];
-      const [removed] = next.splice(startIndex, 1);
+      const removed = next.splice(startIndex, 1)[0];
+      if (!removed) return current;
       next.splice(finishIndex, 0, removed);
       return next;
     });
@@ -107,12 +112,13 @@ export function useTaskBoard(initialEmployees: Employee[], initialTasks: Task[])
 
   useEffect(() => {
     const cleanup = monitorForElements({
-      onDrop({ source }) {
-        if (!source.data || !isTask(source.data)) return;
-        const task = stableTasks.current.find((t) => t.id === source.data.taskId);
+       onDrop({ source }) {
+        const data = source.data;
+        if (!isTask(data)) return;
+        const task = stableTasks.current.find((t) => t.id === data.taskId);
         if (!task) return;
 
-        const el = document.querySelector(`[data-task-id="${source.data.taskId}"]`);
+        const el = document.querySelector(`[data-task-id="${data.taskId}"]`);
         if (el instanceof HTMLElement) triggerPostMoveFlash(el);
 
         const name = stableEmployees.current.find((e) => e.id === task.employeeId)?.name ?? 'employee';
@@ -125,6 +131,27 @@ export function useTaskBoard(initialEmployees: Employee[], initialTasks: Task[])
   const tasksForEmployee = (employeeId: string) =>
     tasks.filter((t) => t.employeeId === employeeId);
 
+  const updateTask = (taskId: string, updates: Partial<Omit<Task, 'id'>>) => {
+    setTasks((current) =>
+      current.map((t) => (t.id === taskId ? { ...t, ...updates } : t)),
+    );
+  };
+
+  const deleteTask = (taskId: string) => {
+    setTasks((current) => current.filter((t) => t.id !== taskId));
+  };
+
+  const updateEmployee = (employeeId: string, updates: Partial<Omit<Employee, 'id'>>) => {
+    setEmployees((current) =>
+      current.map((e) => (e.id === employeeId ? { ...e, ...updates } : e)),
+    );
+  };
+
+  const deleteEmployee = (employeeId: string) => {
+    setEmployees((current) => current.filter((e) => e.id !== employeeId));
+    setTasks((current) => current.filter((t) => t.employeeId !== employeeId));
+  };
+
   return {
     employees,
     tasks,
@@ -134,5 +161,9 @@ export function useTaskBoard(initialEmployees: Employee[], initialTasks: Task[])
     reorderEmployees,
     resizeTask,
     tasksForEmployee,
+    updateTask,
+    deleteTask,
+    updateEmployee,
+    deleteEmployee,
   };
 }

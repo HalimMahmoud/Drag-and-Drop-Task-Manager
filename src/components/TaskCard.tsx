@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, type RefObject } from 'react';
 import { draggable } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
 import type { Task, DragData } from '../types';
 import {
@@ -6,39 +6,55 @@ import {
   MIN_TASK_HOURS,
   isPositionValid,
   PRIORITY_COLORS,
+  priorityToColorKey,
   formatHour,
 } from '../utils/board';
+import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { ItemMenu } from '@/components/ItemMenu';
 
 interface TaskCardProps {
   task: Task;
   rowTasks: Task[];
   onResize: (taskId: string, durationHours: number, startHour: number) => void;
+  onEditTask: (task: Task) => void;
+  onDeleteTask: (task: Task) => void;
 }
 
-const TaskCard = ({ task, rowTasks, onResize }: TaskCardProps) => {
-  const ref = useRef<HTMLDivElement>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [resizing, setResizing] = useState<{
-    handle: 'left' | 'right';
-    startX: number;
-    startDuration: number;
-    startStartHour: number;
-  } | null>(null);
+interface ResizeState {
+  handle: 'left' | 'right';
+  startX: number;
+  startDuration: number;
+  startStartHour: number;
+}
+
+const useResize = (
+  task: Task,
+  onResize: (taskId: string, durationHours: number, startHour: number) => void,
+  elementRef: RefObject<HTMLDivElement | null>,
+  rowTasks: Task[],
+) => {
+  const [resizing, setResizing] = useState<ResizeState | null>(null);
+
+  const taskIdRef = useRef(task.id);
+  taskIdRef.current = task.id;
 
   const rowTasksRef = useRef(rowTasks);
-  useEffect(() => { rowTasksRef.current = rowTasks; }, [rowTasks]);
+  rowTasksRef.current = rowTasks;
+
+  const onResizeRef = useRef(onResize);
+  onResizeRef.current = onResize;
 
   useEffect(() => {
     if (!resizing) return;
 
-    const handleMouseMove = (e: globalThis.MouseEvent) => {
+    const handleMouseMove = (e: MouseEvent) => {
       const delta = e.clientX - resizing.startX;
-      const parentEl = ref.current?.parentElement;
+      const parentEl = elementRef.current?.parentElement;
       if (!parentEl) return;
       const currentHourWidth = parentEl.getBoundingClientRect().width / TIMELINE_HOURS;
       const deltaHours = Math.round(delta / currentHourWidth);
-      const otherTasks = rowTasksRef.current.filter((t) => t.id !== task.id);
+      const otherTasks = rowTasksRef.current.filter((t) => t.id !== taskIdRef.current);
 
       if (resizing.handle === 'right') {
         const maxDuration = TIMELINE_HOURS - resizing.startStartHour;
@@ -47,7 +63,7 @@ const TaskCard = ({ task, rowTasks, onResize }: TaskCardProps) => {
           Math.min(resizing.startDuration + deltaHours, maxDuration),
         );
         if (isPositionValid(resizing.startStartHour, newDuration, otherTasks)) {
-          onResize(task.id, newDuration, resizing.startStartHour);
+          onResizeRef.current(taskIdRef.current, newDuration, resizing.startStartHour);
         }
       } else {
         const rightEdge = resizing.startStartHour + resizing.startDuration;
@@ -57,7 +73,7 @@ const TaskCard = ({ task, rowTasks, onResize }: TaskCardProps) => {
         );
         const newDuration = rightEdge - newStartHour;
         if (isPositionValid(newStartHour, newDuration, otherTasks)) {
-          onResize(task.id, newDuration, newStartHour);
+          onResizeRef.current(taskIdRef.current, newDuration, newStartHour);
         }
       }
     };
@@ -70,82 +86,110 @@ const TaskCard = ({ task, rowTasks, onResize }: TaskCardProps) => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [resizing, task.id, onResize]);
+  }, [resizing, elementRef]);
+
+  const startResize = (handle: 'left' | 'right') => (e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setResizing({
+      handle,
+      startX: e.clientX,
+      startDuration: task.durationHours,
+      startStartHour: task.startHour,
+    });
+  };
+
+  return { startResize };
+};
+
+const useDraggableTask = (
+  elementRef: RefObject<HTMLDivElement | null>,
+  dragHandleRef: RefObject<HTMLDivElement | null>,
+  task: Task,
+) => {
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
-    const element = ref.current;
+    const element = elementRef.current;
     if (!element) return;
 
     return draggable({
       element,
+      ...(dragHandleRef.current ? { dragHandle: dragHandleRef.current } : {}),
       getInitialData: ({ input }) => {
-        const rect = element.getBoundingClientRect();
-        return {
-          type: 'task',
-          taskId: task.id,
-          employeeId: task.employeeId,
-          startHour: task.startHour,
-          durationHours: task.durationHours,
-          dragOffsetX: input.clientX - rect.left,
-        } satisfies DragData;
-      },
+         const rect = element.getBoundingClientRect();
+         return {
+           type: 'task',
+           taskId: task.id,
+           employeeId: task.employeeId,
+           startHour: task.startHour,
+           durationHours: task.durationHours,
+           dragOffsetX: input.clientX - rect.left,
+         } satisfies DragData;
+       },
       onDragStart: () => setIsDragging(true),
       onDrop: () => setIsDragging(false),
     });
   }, [task.id, task.employeeId, task.startHour, task.durationHours]);
 
-  const handleResizeStart =
-    (handle: 'left' | 'right') => (e: React.MouseEvent<HTMLDivElement>) => {
-      e.preventDefault();
-      e.stopPropagation();
-      setResizing({
-        handle,
-        startX: e.clientX,
-        startDuration: task.durationHours,
-        startStartHour: task.startHour,
-      });
-    };
+  return isDragging;
+};
 
-  const colors = PRIORITY_COLORS[task.priority.toLowerCase()] ?? PRIORITY_COLORS.low;
+const TaskCard = ({ task, rowTasks, onResize, onEditTask, onDeleteTask }: TaskCardProps) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const dragHandleRef = useRef<HTMLDivElement>(null);
+
+  const { startResize } = useResize(task, onResize, ref, rowTasks);
+  const isDragging = useDraggableTask(ref, dragHandleRef, task);
+
+  const priorityColorKey = priorityToColorKey(task.priority);
+  const priorityColors = PRIORITY_COLORS[priorityColorKey];
+  const taskColor = task.color ?? priorityColors.border;
+  const dimColor = task.color ? `${task.color}66` : priorityColors.dim;
 
   return (
     <div
       ref={ref}
-      className={['task', isDragging ? 'task--dragging' : ''].filter(Boolean).join(' ')}
+      className={cn('task', isDragging && 'task--dragging')}
       style={{
         left: `${(task.startHour / TIMELINE_HOURS) * 100}%`,
         width: `${(task.durationHours / TIMELINE_HOURS) * 100}%`,
-        backgroundColor: colors.bg,
-        borderColor: colors.border,
+        backgroundColor: 'white',
+        boxShadow: `inset 0 0 0 1000px ${dimColor}`,
       }}
       data-task-id={task.id}
     >
       <div
         className="resize-handle resize-handle--left"
-        style={{ backgroundColor: colors.dim }}
-        onMouseDown={handleResizeStart('left')}
+        style={{ backgroundColor: taskColor }}
+        onMouseDown={startResize('left')}
       />
 
-      <div className="task__top">
-        <Badge variant={task.priority.toLowerCase() as 'high' | 'medium' | 'low'}>
-          {task.priority}
-        </Badge>
-        <span className="task__id">#{task.id}</span>
+      <div ref={dragHandleRef} className="task__content">
+        <div className="task__top">
+          <Badge variant={priorityColorKey}>
+            {task.priority}
+          </Badge>
+        </div>
+
+        <div className="task__title">{task.title}</div>
+
+        <div className="task__footer">
+          <span>
+            {formatHour(task.startHour)}–{formatHour(task.startHour + task.durationHours)}
+          </span>
+          <span className="task__id">#{task.id}</span>
+        </div>
       </div>
 
-      <div className="task__title">{task.title}</div>
-
-      <div className="task__footer">
-        <span>
-          {formatHour(task.startHour)}–{formatHour(task.startHour + task.durationHours)}
-        </span>
-        <span>⋮⋮</span>
+      <div className="task__menu">
+        <ItemMenu onEdit={() => onEditTask(task)} onDelete={() => onDeleteTask(task)} />
       </div>
 
       <div
         className="resize-handle resize-handle--right"
-        style={{ backgroundColor: colors.dim }}
-        onMouseDown={handleResizeStart('right')}
+        style={{ backgroundColor: taskColor }}
+        onMouseDown={startResize('right')}
       />
     </div>
   );
