@@ -5,10 +5,8 @@ export default function TimeHeader() {
     <div className="timeline-header">
       <div className="timeline-header__spacer" />
       <div className="timeline-header__track">
-        {Array.from({ length: TIMELINE_HOURS }, (_, i) => (
-          <div key={i} className="timeline-header__label">
-            {formatHour(i)}
-          </div>
+        {Array.from({ length: TIMELINE_HOURS }, (_, hour) => (
+          <div key={hour} className="timeline-header__label">{formatHour(hour)}</div>
         ))}
       </div>
     </div>

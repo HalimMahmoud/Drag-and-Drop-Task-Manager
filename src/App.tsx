@@ -34,11 +34,7 @@ export default function App() {
       <Header />
 
       <section className="board-shell">
-        <div
-          ref={boardRef}
-          className="board"
-          style={{ '--hour-width': `${hourWidth}px` } as CSSProperties}
-        >
+        <div ref={boardRef} className="board" style={{ '--hour-width': `${hourWidth}px` } as CSSProperties}>
           <TimeHeader />
           {employees.map((employee) => (
             <EmployeeRow
@@ -48,23 +44,21 @@ export default function App() {
               onPlaceTask={placeTask}
               onReorderRow={reorderEmployees}
               onResizeTask={resizeTask}
-              onEditTask={(task) => setEditingTask(task)}
-              onDeleteTask={(task) => setDeletingTask(task)}
-              onEditEmployee={(emp) => setEditingEmployee(emp)}
-              onDeleteEmployee={(emp) => setDeletingEmployee(emp)}
+              onEditTask={setEditingTask}
+              onDeleteTask={setDeletingTask}
+              onEditEmployee={setEditingEmployee}
+              onDeleteEmployee={setDeletingEmployee}
             />
           ))}
         </div>
       </section>
 
-      {/* Task edit dialog */}
       {editingTask && (
         <EditTaskDialog
           key={editingTask.id}
           task={editingTask}
-          employees={employees}
           open={true}
-          onOpenChange={(open) => { if (!open) setEditingTask(null); }}
+          onOpenChange={(open) => !open && setEditingTask(null)}
           onSave={(updates) => {
             updateTask(editingTask.id, updates);
             setEditingTask(null);
@@ -72,12 +66,12 @@ export default function App() {
         />
       )}
 
-      {/* Employee edit dialog */}
       {editingEmployee && (
         <EditEmployeeDialog
+          key={editingEmployee.id}
           employee={editingEmployee}
           open={true}
-          onOpenChange={(open) => { if (!open) setEditingEmployee(null); }}
+          onOpenChange={(open) => !open && setEditingEmployee(null)}
           onSave={(updates) => {
             updateEmployee(editingEmployee.id, updates);
             setEditingEmployee(null);
@@ -85,13 +79,12 @@ export default function App() {
         />
       )}
 
-      {/* Delete task confirmation */}
       {deletingTask && (
         <DeleteConfirmDialog
           title="Delete Task"
           description={`Are you sure you want to delete "${deletingTask.title}"? This action cannot be undone.`}
           open={true}
-          onOpenChange={(open) => { if (!open) setDeletingTask(null); }}
+          onOpenChange={(open) => !open && setDeletingTask(null)}
           onConfirm={() => {
             deleteTask(deletingTask.id);
             setDeletingTask(null);
@@ -99,13 +92,12 @@ export default function App() {
         />
       )}
 
-      {/* Delete employee confirmation */}
       {deletingEmployee && (
         <DeleteConfirmDialog
           title="Delete Employee"
           description={`Are you sure you want to delete "${deletingEmployee.name}"? This action will also remove all their tasks. This action cannot be undone.`}
           open={true}
-          onOpenChange={(open) => { if (!open) setDeletingEmployee(null); }}
+          onOpenChange={(open) => !open && setDeletingEmployee(null)}
           onConfirm={() => {
             deleteEmployee(deletingEmployee.id);
             setDeletingEmployee(null);

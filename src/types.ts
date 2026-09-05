@@ -25,19 +25,24 @@ export interface Task {
   color?: string;
 }
 
-export type DragData =
-  | {
-      type: 'task';
-      taskId: string;
-      employeeId: string;
-      startHour: number;
-      durationHours: number;
-      dragOffsetX: number;
-    }
-  | { type: 'row'; employeeId: string };
+export interface TaskDragData {
+  type: 'task';
+  taskId: string;
+  employeeId: string;
+  startHour: number;
+  durationHours: number;
+  dragOffsetX: number;
+}
 
-export const isTask = (v: unknown): v is DragData & { type: 'task' } =>
-  typeof v === 'object' && v !== null && (v as Record<string, unknown>)['type'] === 'task';
+export interface RowDragData {
+  type: 'row';
+  employeeId: string;
+}
 
-export const isRow = (v: unknown): v is DragData & { type: 'row' } =>
-  typeof v === 'object' && v !== null && (v as Record<string, unknown>)['type'] === 'row';
+export type DragData = TaskDragData | RowDragData;
+
+export const isTask = (data: unknown): data is TaskDragData =>
+  Boolean(data && typeof data === 'object' && (data as { type?: unknown }).type === 'task');
+
+export const isRow = (data: unknown): data is RowDragData =>
+  Boolean(data && typeof data === 'object' && (data as { type?: unknown }).type === 'row');

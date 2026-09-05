@@ -1,22 +1,16 @@
-import * as React from 'react';
+import type React from 'react';
 import { cn } from '@/lib/utils';
 
-function Input({ className, type, ...props }: React.ComponentPropsWithoutRef<'input'>) {
+export function Input({ className, type, ...props }: React.ComponentPropsWithoutRef<'input'>) {
   return (
     <input
       type={type}
       data-slot="input"
       className={cn(
-        'flex h-9 w-full rounded-md border bg-transparent px-3 py-2 text-sm',
-        'transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium',
-        'placeholder:text-muted-foreground focus-visible:outline-none',
-        'focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed',
-        'disabled:opacity-50',
-        className
+        'flex h-9 w-full rounded-md border bg-transparent px-3 py-2 text-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50',
+        className,
       )}
       {...props}
     />
   );
 }
-
-export { Input };

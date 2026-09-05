@@ -5,10 +5,7 @@ import * as liveRegion from '@atlaskit/pragmatic-drag-and-drop-live-region';
 import { getReorderDestinationIndex } from '@atlaskit/pragmatic-drag-and-drop-hitbox/util/get-reorder-destination-index';
 import type { Edge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/types';
 import { isTask, type Employee, type Task } from '../types';
-import {
-  TIMELINE_HOURS,
-  isPositionValid,
-} from '../utils/board';
+import { TIMELINE_HOURS, isPositionValid } from '../utils/board';
 
 export interface UseTaskBoardReturn {
   employees: Employee[];
@@ -31,126 +28,82 @@ export function useTaskBoard(initialEmployees: Employee[], initialTasks: Task[])
   const [hourWidth, setHourWidth] = useState(100);
   const boardRef = useRef<HTMLDivElement>(null);
 
-  const stableEmployees = useRef(employees);
-  const stableTasks = useRef(tasks);
+  const employeesRef = useRef(employees);
+  const tasksRef = useRef(tasks);
   useEffect(() => {
-    stableEmployees.current = employees;
-    stableTasks.current = tasks;
+    employeesRef.current = employees;
+    tasksRef.current = tasks;
   }, [employees, tasks]);
 
   useEffect(() => {
-    const board = boardRef.current;
-    if (!board) return;
-
-    const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const trackWidth = entry.contentRect.width - 230;
-        setHourWidth(Math.max(10, trackWidth / TIMELINE_HOURS));
-      }
+    if (!boardRef.current) return;
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry) setHourWidth(Math.max(10, (entry.contentRect.width - 230) / TIMELINE_HOURS));
     });
-    observer.observe(board);
+    observer.observe(boardRef.current);
     return () => observer.disconnect();
   }, []);
 
   const placeTask = (taskId: string, destinationEmployeeId: string, newStartHour: number) => {
-    setTasks((current) => {
-      const task = current.find((t) => t.id === taskId);
-      if (!task) return current;
-
-      const rowTasks = current.filter(
-        (t) => t.employeeId === destinationEmployeeId && t.id !== taskId,
-      );
-
-      if (!isPositionValid(newStartHour, task.durationHours, rowTasks)) return current;
-
-      return current.map((t) =>
-        t.id === taskId
-          ? { ...t, employeeId: destinationEmployeeId, startHour: newStartHour }
-          : t,
-      );
+    setTasks((prev) => {
+      const task = prev.find((t) => t.id === taskId);
+      if (!task) return prev;
+      const otherTasks = prev.filter((t) => t.employeeId === destinationEmployeeId && t.id !== taskId);
+      if (!isPositionValid(newStartHour, task.durationHours, otherTasks)) return prev;
+      return prev.map((t) => (t.id === taskId ? { ...t, employeeId: destinationEmployeeId, startHour: newStartHour } : t));
     });
   };
 
   const reorderEmployees = (sourceId: string, destinationId: string, edge: Edge | null) => {
     if (sourceId === destinationId) return;
-    setEmployees((current) => {
-      const startIndex = current.findIndex((e) => e.id === sourceId);
-      const targetIndex = current.findIndex((e) => e.id === destinationId);
-      if (startIndex < 0 || targetIndex < 0) return current;
+    setEmployees((prev) => {
+      const startIndex = prev.findIndex((e) => e.id === sourceId);
+      const targetIndex = prev.findIndex((e) => e.id === destinationId);
+      if (startIndex < 0 || targetIndex < 0) return prev;
 
       const finishIndex = getReorderDestinationIndex({
         startIndex,
         indexOfTarget: targetIndex,
         closestEdgeOfTarget: edge,
-        axis: 'horizontal',
+        axis: 'vertical',
       });
-
-      const next = [...current];
-      const removed = next.splice(startIndex, 1)[0];
-      if (!removed) return current;
-      next.splice(finishIndex, 0, removed);
+      const next = [...prev];
+      const [removed] = next.splice(startIndex, 1);
+      if (removed) next.splice(finishIndex, 0, removed);
       return next;
     });
   };
 
   const resizeTask = (taskId: string, durationHours: number, startHour: number) => {
-    setTasks((current) => {
-      const task = current.find((t) => t.id === taskId);
-      if (!task) return current;
-
-      const rowTasks = current.filter(
-        (t) => t.employeeId === task.employeeId && t.id !== taskId,
-      );
-
-      if (!isPositionValid(startHour, durationHours, rowTasks)) return current;
-
-      return current.map((t) =>
-        t.id === taskId ? { ...t, durationHours, startHour } : t,
-      );
+    setTasks((prev) => {
+      const task = prev.find((t) => t.id === taskId);
+      if (!task) return prev;
+      const otherTasks = prev.filter((t) => t.employeeId === task.employeeId && t.id !== taskId);
+      if (!isPositionValid(startHour, durationHours, otherTasks)) return prev;
+      return prev.map((t) => (t.id === taskId ? { ...t, durationHours, startHour } : t));
     });
   };
 
   useEffect(() => {
     const cleanup = monitorForElements({
-       onDrop({ source }) {
-        const data = source.data;
-        if (!isTask(data)) return;
-        const task = stableTasks.current.find((t) => t.id === data.taskId);
+      onDrop({ source }) {
+        if (!isTask(source.data)) return;
+        const taskData = source.data;
+        const task = tasksRef.current.find((t) => t.id === taskData.taskId);
         if (!task) return;
 
-        const el = document.querySelector(`[data-task-id="${data.taskId}"]`);
-        if (el instanceof HTMLElement) triggerPostMoveFlash(el);
+        const targetEl = document.querySelector(`[data-task-id="${taskData.taskId}"]`);
+        if (targetEl instanceof HTMLElement) triggerPostMoveFlash(targetEl);
 
-        const name = stableEmployees.current.find((e) => e.id === task.employeeId)?.name ?? 'employee';
-        liveRegion.announce(`${task.title} moved to ${name}.`);
+        const employeeName = employeesRef.current.find((e) => e.id === task.employeeId)?.name ?? 'employee';
+        liveRegion.announce(`${task.title} moved to ${employeeName}.`);
       },
     });
-    return () => { cleanup(); liveRegion.cleanup(); };
+    return () => {
+      cleanup();
+      liveRegion.cleanup();
+    };
   }, []);
-
-  const tasksForEmployee = (employeeId: string) =>
-    tasks.filter((t) => t.employeeId === employeeId);
-
-  const updateTask = (taskId: string, updates: Partial<Omit<Task, 'id'>>) => {
-    setTasks((current) =>
-      current.map((t) => (t.id === taskId ? { ...t, ...updates } : t)),
-    );
-  };
-
-  const deleteTask = (taskId: string) => {
-    setTasks((current) => current.filter((t) => t.id !== taskId));
-  };
-
-  const updateEmployee = (employeeId: string, updates: Partial<Omit<Employee, 'id'>>) => {
-    setEmployees((current) =>
-      current.map((e) => (e.id === employeeId ? { ...e, ...updates } : e)),
-    );
-  };
-
-  const deleteEmployee = (employeeId: string) => {
-    setEmployees((current) => current.filter((e) => e.id !== employeeId));
-    setTasks((current) => current.filter((t) => t.employeeId !== employeeId));
-  };
 
   return {
     employees,
@@ -160,10 +113,13 @@ export function useTaskBoard(initialEmployees: Employee[], initialTasks: Task[])
     placeTask,
     reorderEmployees,
     resizeTask,
-    tasksForEmployee,
-    updateTask,
-    deleteTask,
-    updateEmployee,
-    deleteEmployee,
+    tasksForEmployee: (employeeId) => tasks.filter((t) => t.employeeId === employeeId),
+    updateTask: (taskId, updates) => setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, ...updates } : t))),
+    deleteTask: (taskId) => setTasks((prev) => prev.filter((t) => t.id !== taskId)),
+    updateEmployee: (empId, updates) => setEmployees((prev) => prev.map((e) => (e.id === empId ? { ...e, ...updates } : e))),
+    deleteEmployee: (empId) => {
+      setEmployees((prev) => prev.filter((e) => e.id !== empId));
+      setTasks((prev) => prev.filter((t) => t.employeeId !== empId));
+    },
   };
 }

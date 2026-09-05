@@ -1,14 +1,7 @@
-import React, { useEffect, useRef, useState, type RefObject } from 'react';
+import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type RefObject } from 'react';
 import { draggable } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
 import type { Task, DragData } from '../types';
-import {
-  TIMELINE_HOURS,
-  MIN_TASK_HOURS,
-  isPositionValid,
-  PRIORITY_COLORS,
-  priorityToColorKey,
-  formatHour,
-} from '../utils/board';
+import { TIMELINE_HOURS, MIN_TASK_HOURS, isPositionValid, PRIORITY_COLORS, priorityToColorKey, formatHour } from '../utils/board';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { ItemMenu } from '@/components/ItemMenu';
@@ -28,7 +21,7 @@ interface ResizeState {
   startStartHour: number;
 }
 
-const useResize = (
+const useTaskResize = (
   task: Task,
   onResize: (taskId: string, durationHours: number, startHour: number) => void,
   elementRef: RefObject<HTMLDivElement | null>,
@@ -36,59 +29,45 @@ const useResize = (
 ) => {
   const [resizing, setResizing] = useState<ResizeState | null>(null);
 
-  const taskIdRef = useRef(task.id);
-  taskIdRef.current = task.id;
-
-  const rowTasksRef = useRef(rowTasks);
-  rowTasksRef.current = rowTasks;
-
-  const onResizeRef = useRef(onResize);
-  onResizeRef.current = onResize;
-
   useEffect(() => {
     if (!resizing) return;
 
     const handleMouseMove = (e: MouseEvent) => {
-      const delta = e.clientX - resizing.startX;
       const parentEl = elementRef.current?.parentElement;
       if (!parentEl) return;
-      const currentHourWidth = parentEl.getBoundingClientRect().width / TIMELINE_HOURS;
-      const deltaHours = Math.round(delta / currentHourWidth);
-      const otherTasks = rowTasksRef.current.filter((t) => t.id !== taskIdRef.current);
+
+      const hourWidth = parentEl.getBoundingClientRect().width / TIMELINE_HOURS;
+      const deltaHours = Math.round((e.clientX - resizing.startX) / hourWidth);
+      const otherTasks = rowTasks.filter((t) => t.id !== task.id);
 
       if (resizing.handle === 'right') {
-        const maxDuration = TIMELINE_HOURS - resizing.startStartHour;
         const newDuration = Math.max(
           MIN_TASK_HOURS,
-          Math.min(resizing.startDuration + deltaHours, maxDuration),
+          Math.min(resizing.startDuration + deltaHours, TIMELINE_HOURS - resizing.startStartHour),
         );
         if (isPositionValid(resizing.startStartHour, newDuration, otherTasks)) {
-          onResizeRef.current(taskIdRef.current, newDuration, resizing.startStartHour);
+          onResize(task.id, newDuration, resizing.startStartHour);
         }
       } else {
         const rightEdge = resizing.startStartHour + resizing.startDuration;
-        const newStartHour = Math.max(
-          0,
-          Math.min(resizing.startStartHour + deltaHours, rightEdge - MIN_TASK_HOURS),
-        );
+        const newStartHour = Math.max(0, Math.min(resizing.startStartHour + deltaHours, rightEdge - MIN_TASK_HOURS));
         const newDuration = rightEdge - newStartHour;
         if (isPositionValid(newStartHour, newDuration, otherTasks)) {
-          onResizeRef.current(taskIdRef.current, newDuration, newStartHour);
+          onResize(task.id, newDuration, newStartHour);
         }
       }
     };
 
     const handleMouseUp = () => setResizing(null);
-
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [resizing, elementRef]);
+  }, [resizing, elementRef, task.id, rowTasks, onResize]);
 
-  const startResize = (handle: 'left' | 'right') => (e: React.MouseEvent<HTMLDivElement>) => {
+  const startResize = (handle: 'left' | 'right') => (e: ReactMouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setResizing({
@@ -102,11 +81,7 @@ const useResize = (
   return { startResize };
 };
 
-const useDraggableTask = (
-  elementRef: RefObject<HTMLDivElement | null>,
-  dragHandleRef: RefObject<HTMLDivElement | null>,
-  task: Task,
-) => {
+const useDraggableTask = (elementRef: RefObject<HTMLDivElement | null>, dragHandleRef: RefObject<HTMLDivElement | null>, task: Task) => {
   const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
@@ -116,40 +91,38 @@ const useDraggableTask = (
     return draggable({
       element,
       ...(dragHandleRef.current ? { dragHandle: dragHandleRef.current } : {}),
-      getInitialData: ({ input }) => {
-         const rect = element.getBoundingClientRect();
-         return {
-           type: 'task',
-           taskId: task.id,
-           employeeId: task.employeeId,
-           startHour: task.startHour,
-           durationHours: task.durationHours,
-           dragOffsetX: input.clientX - rect.left,
-         } satisfies DragData;
-       },
+      getInitialData: ({ input }) =>
+        ({
+          type: 'task',
+          taskId: task.id,
+          employeeId: task.employeeId,
+          startHour: task.startHour,
+          durationHours: task.durationHours,
+          dragOffsetX: input.clientX - element.getBoundingClientRect().left,
+        }) satisfies DragData,
       onDragStart: () => setIsDragging(true),
       onDrop: () => setIsDragging(false),
     });
-  }, [task.id, task.employeeId, task.startHour, task.durationHours]);
+  }, [task.id, task.employeeId, task.startHour, task.durationHours, elementRef, dragHandleRef]);
 
   return isDragging;
 };
 
-const TaskCard = ({ task, rowTasks, onResize, onEditTask, onDeleteTask }: TaskCardProps) => {
-  const ref = useRef<HTMLDivElement>(null);
+export default function TaskCard({ task, rowTasks, onResize, onEditTask, onDeleteTask }: TaskCardProps) {
+  const cardRef = useRef<HTMLDivElement>(null);
   const dragHandleRef = useRef<HTMLDivElement>(null);
 
-  const { startResize } = useResize(task, onResize, ref, rowTasks);
-  const isDragging = useDraggableTask(ref, dragHandleRef, task);
+  const { startResize } = useTaskResize(task, onResize, cardRef, rowTasks);
+  const isDragging = useDraggableTask(cardRef, dragHandleRef, task);
 
-  const priorityColorKey = priorityToColorKey(task.priority);
-  const priorityColors = PRIORITY_COLORS[priorityColorKey];
-  const taskColor = task.color ?? priorityColors.border;
+  const priorityKey = priorityToColorKey(task.priority);
+  const priorityColors = PRIORITY_COLORS[priorityKey];
+  const accentColor = task.color ?? priorityColors.border;
   const dimColor = task.color ? `${task.color}66` : priorityColors.dim;
 
   return (
     <div
-      ref={ref}
+      ref={cardRef}
       className={cn('task', isDragging && 'task--dragging')}
       style={{
         left: `${(task.startHour / TIMELINE_HOURS) * 100}%`,
@@ -159,40 +132,22 @@ const TaskCard = ({ task, rowTasks, onResize, onEditTask, onDeleteTask }: TaskCa
       }}
       data-task-id={task.id}
     >
-      <div
-        className="resize-handle resize-handle--left"
-        style={{ backgroundColor: taskColor }}
-        onMouseDown={startResize('left')}
-      />
+      <div className="resize-handle resize-handle--left" style={{ backgroundColor: accentColor }} onMouseDown={startResize('left')} />
 
       <div ref={dragHandleRef} className="task__content">
         <div className="task__top">
-          <Badge variant={priorityColorKey}>
-            {task.priority}
-          </Badge>
+          <Badge variant={priorityKey}>{task.priority}</Badge>
+          <ItemMenu onEdit={() => onEditTask(task)} onDelete={() => onDeleteTask(task)} />
         </div>
-
         <div className="task__title">{task.title}</div>
-
+        <div className="task__description">{task.description || '\u00A0'}</div>
         <div className="task__footer">
-          <span>
-            {formatHour(task.startHour)}–{formatHour(task.startHour + task.durationHours)}
-          </span>
+          <span>{formatHour(task.startHour)}–{formatHour(task.startHour + task.durationHours)}</span>
           <span className="task__id">#{task.id}</span>
         </div>
       </div>
 
-      <div className="task__menu">
-        <ItemMenu onEdit={() => onEditTask(task)} onDelete={() => onDeleteTask(task)} />
-      </div>
-
-      <div
-        className="resize-handle resize-handle--right"
-        style={{ backgroundColor: taskColor }}
-        onMouseDown={startResize('right')}
-      />
+      <div className="resize-handle resize-handle--right" style={{ backgroundColor: accentColor }} onMouseDown={startResize('right')} />
     </div>
   );
-};
-
-export default TaskCard;
+}

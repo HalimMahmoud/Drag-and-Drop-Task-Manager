@@ -8,6 +8,7 @@ import { TIMELINE_HOURS, findNearestValidStartHour, snapToHour } from '../utils/
 import TaskCard from '../components/TaskCard';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ItemMenu } from '@/components/ItemMenu';
+import { cn } from '@/lib/utils';
 
 interface EmployeeRowProps {
   employee: Employee;
@@ -21,7 +22,7 @@ interface EmployeeRowProps {
   onDeleteEmployee: (employee: Employee) => void;
 }
 
-function EmployeeRow({
+export default function EmployeeRow({
   employee,
   tasks,
   onPlaceTask,
@@ -35,17 +36,28 @@ function EmployeeRow({
   const rowRef = useRef<HTMLDivElement>(null);
   const dragHandleRef = useRef<HTMLDivElement>(null);
   const taskAreaRef = useRef<HTMLDivElement>(null);
+
   const [isRowOver, setIsRowOver] = useState(false);
   const [rowEdge, setRowEdge] = useState<Edge | null>(null);
   const [dropIndicatorHour, setDropIndicatorHour] = useState<number | null>(null);
 
-  const stableTasksRef = useRef(tasks);
-  useEffect(() => { stableTasksRef.current = tasks; }, [tasks]);
+  const tasksRef = useRef(tasks);
+  useEffect(() => { tasksRef.current = tasks; }, [tasks]);
 
   useEffect(() => {
     const row = rowRef.current;
     const taskArea = taskAreaRef.current;
     if (!row || !taskArea) return;
+
+    const resetRowDropState = () => {
+      setIsRowOver(false);
+      setRowEdge(null);
+    };
+
+    const resetTaskDropState = () => {
+      setIsRowOver(false);
+      setDropIndicatorHour(null);
+    };
 
     return combine(
       draggable({
@@ -56,12 +68,9 @@ function EmployeeRow({
 
       dropTargetForElements({
         element: row,
-        getData: ({ input, element: el }) =>
-          attachClosestEdge(
-            { type: 'row', employeeId: employee.id },
-            { input, element: el, allowedEdges: ['left', 'right'] },
-          ),
         canDrop: ({ source }) => isRow(source.data),
+        getData: ({ input, element }) =>
+          attachClosestEdge({ type: 'row', employeeId: employee.id }, { input, element, allowedEdges: ['top', 'bottom'] }),
         onDragEnter: ({ source, self }) => {
           if (isRow(source.data)) {
             setIsRowOver(true);
@@ -71,91 +80,49 @@ function EmployeeRow({
         onDrag: ({ source, self }) => {
           if (isRow(source.data)) setRowEdge(extractClosestEdge(self.data));
         },
-        onDragLeave: () => {
-          setIsRowOver(false);
-          setRowEdge(null);
-        },
+        onDragLeave: resetRowDropState,
         onDrop: ({ source, self }) => {
-          setIsRowOver(false);
-          setRowEdge(null);
-          const data = source.data;
-          if (isRow(data)) {
-            onReorderRow(data.employeeId, employee.id, extractClosestEdge(self.data));
-          }
+          resetRowDropState();
+          if (isRow(source.data)) onReorderRow(source.data.employeeId, employee.id, extractClosestEdge(self.data));
         },
       }),
 
       dropTargetForElements({
         element: taskArea,
-        canDrop: ({ input, source, element }) => {
-          const data = source.data;
-          if (!isTask(data)) return false;
-          const rect = element.getBoundingClientRect();
-          const rawHour = snapToHour(
-            input.clientX,
-            rect,
-            data.dragOffsetX,
-            data.durationHours,
-          );
-          const otherTasks = stableTasksRef.current.filter(
-            (t) => t.employeeId === employee.id && t.id !== data.taskId,
-          );
-          return findNearestValidStartHour(rawHour, data.durationHours, otherTasks) !== null;
-        },
         getDropEffect: () => 'move',
-
+        canDrop: ({ input, source, element }) => {
+          if (!isTask(source.data)) return false;
+          const taskData = source.data;
+          const rawHour = snapToHour(input.clientX, element.getBoundingClientRect(), taskData.dragOffsetX, taskData.durationHours);
+          const otherTasks = tasksRef.current.filter((t) => t.employeeId === employee.id && t.id !== taskData.taskId);
+          return findNearestValidStartHour(rawHour, taskData.durationHours, otherTasks) !== null;
+        },
         getData: ({ input, source }) => {
-          const data = source.data;
-          if (!isTask(data)) {
-            return {
-              type: 'task-area' as const,
-              employeeId: employee.id,
-              targetStartHour: null,
-            };
-          }
-          const rect = taskArea.getBoundingClientRect();
-          const rawHour = snapToHour(
-            input.clientX,
-            rect,
-            data.dragOffsetX,
-            data.durationHours,
-          );
-          const otherTasks = stableTasksRef.current.filter((t) => t.id !== data.taskId);
-          const targetStartHour = findNearestValidStartHour(
-            rawHour,
-            data.durationHours,
-            otherTasks,
-          );
-
+          if (!isTask(source.data)) return { type: 'task-area' as const, employeeId: employee.id, targetStartHour: null };
+          const taskData = source.data;
+          const rawHour = snapToHour(input.clientX, taskArea.getBoundingClientRect(), taskData.dragOffsetX, taskData.durationHours);
+          const otherTasks = tasksRef.current.filter((t) => t.employeeId === employee.id && t.id !== taskData.taskId);
           return {
             type: 'task-area' as const,
             employeeId: employee.id,
-            targetStartHour,
+            targetStartHour: findNearestValidStartHour(rawHour, taskData.durationHours, otherTasks),
           };
         },
-
         onDragEnter: ({ self }) => {
           setIsRowOver(true);
-          const targetStartHour = self.data['targetStartHour'];
-          setDropIndicatorHour(typeof targetStartHour === 'number' ? targetStartHour : null);
+          const targetHour = self.data['targetStartHour'];
+          setDropIndicatorHour(typeof targetHour === 'number' ? targetHour : null);
         },
         onDrag: ({ self }) => {
-          const targetStartHour = self.data['targetStartHour'];
-          setDropIndicatorHour(typeof targetStartHour === 'number' ? targetStartHour : null);
+          const targetHour = self.data['targetStartHour'];
+          setDropIndicatorHour(typeof targetHour === 'number' ? targetHour : null);
         },
-        onDragLeave: () => {
-          setIsRowOver(false);
-          setDropIndicatorHour(null);
-        },
+        onDragLeave: resetTaskDropState,
         onDrop: ({ source, self }) => {
-          setIsRowOver(false);
-          setDropIndicatorHour(null);
-          const data = source.data;
-          if (isTask(data)) {
-            const targetStartHour = self.data['targetStartHour'];
-            if (typeof targetStartHour === 'number') {
-              onPlaceTask(data.taskId, employee.id, targetStartHour);
-            }
+          resetTaskDropState();
+          const targetHour = self.data['targetStartHour'];
+          if (isTask(source.data) && typeof targetHour === 'number') {
+            onPlaceTask(source.data.taskId, employee.id, targetHour);
           }
         },
       }),
@@ -165,17 +132,28 @@ function EmployeeRow({
   return (
     <div
       ref={rowRef}
-      className={[
+      className={cn(
         'employee-row',
-        isRowOver ? 'employee-row--over' : '',
-        rowEdge === 'left' ? 'employee-row--edge-left' : '',
-        rowEdge === 'right' ? 'employee-row--edge-right' : '',
-      ].filter(Boolean).join(' ')}
+        isRowOver && 'employee-row--over',
+        rowEdge === 'top' && 'employee-row--edge-top',
+        rowEdge === 'bottom' && 'employee-row--edge-bottom',
+      )}
     >
-      <div className="employee">
-        <div ref={dragHandleRef}>
-          <Avatar>
-            <AvatarFallback>{employee.name.charAt(0)}</AvatarFallback>
+      <div ref={dragHandleRef} className="employee">
+        <div>
+          <Avatar
+            className="border-2 ring-1 ring-black/5"
+            style={{ borderColor: employee.color ?? '#3b82f6' }}
+          >
+            <AvatarFallback
+              className="font-semibold"
+              style={{
+                color: employee.color ?? '#3b82f6',
+                backgroundColor: employee.color ? `${employee.color}15` : '#f0f6ff',
+              }}
+            >
+              {employee.name.charAt(0)}
+            </AvatarFallback>
           </Avatar>
           <div>
             <div className="employee__name">{employee.name}</div>
@@ -198,10 +176,7 @@ function EmployeeRow({
         ))}
 
         {dropIndicatorHour !== null && (
-          <div
-            className="drop-indicator"
-            style={{ left: `${(dropIndicatorHour / TIMELINE_HOURS) * 100}%` }}
-          />
+          <div className="drop-indicator" style={{ left: `${(dropIndicatorHour / TIMELINE_HOURS) * 100}%` }} />
         )}
 
         {tasks.length === 0 && dropIndicatorHour === null && (
@@ -211,5 +186,3 @@ function EmployeeRow({
     </div>
   );
 }
-
-export default EmployeeRow;

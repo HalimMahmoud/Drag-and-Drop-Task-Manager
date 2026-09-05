@@ -1,60 +1,39 @@
-import React, { useState } from 'react';
-import type { Employee, Priority, Task } from '../types';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+import { useState, type ReactNode } from 'react';
+import type { Priority, Task } from '../types';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 
 interface EditTaskDialogProps {
-  trigger?: React.ReactNode;
+  trigger?: ReactNode;
   task: Task;
-  employees: Employee[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (updates: Partial<Omit<Task, 'id'>>) => void;
 }
 
-const PRIORITY_OPTIONS = ['Low', 'Medium', 'High'] as const;
+const PRIORITY_OPTIONS: Priority[] = ['Low', 'Medium', 'High'];
 
-export function EditTaskDialog({
-  trigger,
-  task,
-  employees,
-  open,
-  onOpenChange,
-  onSave,
-}: EditTaskDialogProps) {
-  const [title, setTitle] = useState(task.title);
-  const [description, setDescription] = useState(task.description ?? '');
-  const [priority, setPriority] = useState<Priority>(task.priority);
-  const [color, setColor] = useState(task.color ?? '#3b82f6');
-  const [employeeId, setEmployeeId] = useState(task.employeeId);
+export function EditTaskDialog({ trigger, task, open, onOpenChange, onSave }: EditTaskDialogProps) {
+  const [form, setForm] = useState({
+    title: task.title,
+    description: task.description ?? '',
+    priority: task.priority,
+    color: task.color ?? '#3b82f6',
+  });
 
-  const handleSave = () => {
-    const updates: Partial<Omit<Task, 'id'>> = {
-      title,
-      priority,
-      employeeId,
-    };
-    if (description) updates.description = description;
-    updates.color = color;
-    onSave(updates);
-  };
+  const updateField = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) =>
+    setForm((prev) => ({ ...prev, [key]: value }));
+
+  const handleSave = () =>
+    onSave({
+      title: form.title,
+      priority: form.priority,
+      color: form.color,
+      ...(form.description ? { description: form.description } : {}),
+    });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -68,45 +47,27 @@ export function EditTaskDialog({
         <div className="grid gap-4 py-4">
           <div className="space-y-2">
             <label className="text-sm font-medium">Title</label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+            <Input value={form.title} onChange={(e) => updateField('title', e.target.value)} />
           </div>
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Description</label>
             <Textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              value={form.description}
+              onChange={(e) => updateField('description', e.target.value)}
               placeholder="Optional task description"
             />
           </div>
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Priority</label>
-            <Select value={priority} onValueChange={(v) => setPriority(v as Priority)}>
+            <Select value={form.priority} onValueChange={(val) => updateField('priority', val as Priority)}>
               <SelectTrigger>
                 <SelectValue placeholder="Select priority" />
               </SelectTrigger>
               <SelectContent>
-                {PRIORITY_OPTIONS.map((p) => (
-                  <SelectItem key={p} value={p}>
-                    {p}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Employee</label>
-            <Select value={employeeId} onValueChange={setEmployeeId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select employee" />
-              </SelectTrigger>
-              <SelectContent>
-                {employees.map((emp) => (
-                  <SelectItem key={emp.id} value={emp.id}>
-                    {emp.name}
-                  </SelectItem>
+                {PRIORITY_OPTIONS.map((priority) => (
+                  <SelectItem key={priority} value={priority}>{priority}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -114,14 +75,12 @@ export function EditTaskDialog({
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Color</label>
-            <Input type="color" value={color} onChange={(e) => setColor(e.target.value)} />
+            <Input type="color" value={form.color} onChange={(e) => updateField('color', e.target.value)} />
           </div>
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange?.(false)}>
-            Cancel
-          </Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button onClick={handleSave}>Save</Button>
         </DialogFooter>
       </DialogContent>
