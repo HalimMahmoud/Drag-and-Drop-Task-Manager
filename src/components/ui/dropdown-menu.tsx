@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 interface DropdownMenuContextValue {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  triggerRef: React.RefObject<HTMLElement | null>;
+  triggerRef: React.RefObject<HTMLButtonElement | null>;
 }
 
 const DropdownMenuContext = React.createContext<DropdownMenuContextValue | undefined>(undefined);
@@ -18,7 +18,7 @@ function useDropdownMenu() {
 
 export function DropdownMenu({ open, onOpenChange, children }: { open?: boolean; onOpenChange?: (open: boolean) => void; children: React.ReactNode }) {
   const [internalOpen, setInternalOpen] = React.useState(false);
-  const triggerRef = React.useRef<HTMLElement>(null);
+  const triggerRef = React.useRef<HTMLButtonElement>(null);
   const isOpen = open ?? internalOpen;
 
   const setIsOpen = (value: boolean) => {
@@ -40,17 +40,21 @@ export function DropdownMenu({ open, onOpenChange, children }: { open?: boolean;
   );
 }
 
+interface TriggerChildProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  ref?: React.Ref<HTMLButtonElement>;
+}
+
 export function DropdownMenuTrigger({ children, asChild, ...props }: React.ComponentPropsWithoutRef<'button'> & { asChild?: boolean }) {
   const { open, onOpenChange, triggerRef } = useDropdownMenu();
 
   if (asChild && React.isValidElement(children)) {
-    return React.cloneElement(children as React.ReactElement<React.HTMLAttributes<HTMLElement>>, {
-      ref: triggerRef as unknown as React.Ref<HTMLElement>,
-      onClick: (e: React.MouseEvent<HTMLElement>) => {
-        (children.props as { onClick?: (e: React.MouseEvent<HTMLElement>) => void }).onClick?.(e);
+    return React.cloneElement(children as React.ReactElement<TriggerChildProps>, {
+      ref: triggerRef,
+      onClick: (e: React.MouseEvent<HTMLButtonElement>) => {
+        (children.props as { onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void }).onClick?.(e);
         onOpenChange(!open);
       },
-    } as React.HTMLAttributes<HTMLElement>);
+    });
   }
 
   return (

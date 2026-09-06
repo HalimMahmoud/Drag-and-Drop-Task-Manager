@@ -41,8 +41,10 @@ export interface RowDragData {
 
 export type DragData = TaskDragData | RowDragData;
 
-export const isTask = (data: unknown): data is TaskDragData =>
-  Boolean(data && typeof data === 'object' && (data as { type?: unknown }).type === 'task');
+export type DraggableData = DragData | Record<string | symbol, unknown> | null | undefined;
 
-export const isRow = (data: unknown): data is RowDragData =>
-  Boolean(data && typeof data === 'object' && (data as { type?: unknown }).type === 'row');
+export const isTask = (data: DraggableData): data is TaskDragData =>
+  typeof data === 'object' && data !== null && 'type' in data && data.type === 'task';
+
+export const isRow = (data: DraggableData): data is RowDragData =>
+  typeof data === 'object' && data !== null && 'type' in data && data.type === 'row';
