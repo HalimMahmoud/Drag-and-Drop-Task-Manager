@@ -1,13 +1,23 @@
 # Dot-directories (.next, .git is exempt, .agents, .vscode, etc.)
-.*/
+.claude/
+.continue/
+.agents/
+.kilo/
+.fallow/
+.codex/
+.gemini/
+.cohere/
+.cursor/
+.cursorrules/
+.kilo/
+
 
 # Any file with "lock" in its name (package-lock.json, yarn.lock, pnpm-lock.yaml, …)
 *lock*
 
 # Dependencies
 node_modules/
-.pnp
-.pnp.js
+
 
 # Next.js
 .next/

@@ -1,5 +1,8 @@
 import { afterEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
+import { ReactNode } from 'react';
+import { render, RenderOptions } from '@testing-library/react';
+import { AuthProvider } from '@/components/AuthProvider';
 
 afterEach(() => cleanup());
 
@@ -55,3 +58,11 @@ Object.defineProperty(window, 'matchMedia', {
     dispatchEvent: vi.fn(),
   })),
 });
+
+// Custom render with AuthProvider
+const customRender = (ui: ReactNode, options?: Omit<RenderOptions, 'wrapper'>) => {
+  return render(ui, { wrapper: AuthProvider, ...options });
+};
+
+export * from '@testing-library/react';
+export { customRender as render };

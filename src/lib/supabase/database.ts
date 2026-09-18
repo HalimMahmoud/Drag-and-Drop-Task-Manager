@@ -2,7 +2,7 @@ import { createClient } from './server';
 import type { EmployeeInsert, EmployeeUpdate, TaskInsert, TaskUpdate, Employee, Task } from './types';
 
 export async function getEmployees(): Promise<Employee[]> {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data, error } = await supabase
     .from('employees')
     .select('*')
@@ -13,7 +13,7 @@ export async function getEmployees(): Promise<Employee[]> {
 }
 
 export async function getTasks(): Promise<Task[]> {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data, error } = await supabase
     .from('tasks')
     .select('*')
@@ -24,7 +24,7 @@ export async function getTasks(): Promise<Task[]> {
 }
 
 export async function createEmployee(employee: EmployeeInsert): Promise<Employee> {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data, error } = await supabase
     .from('employees')
     .insert(employee)
@@ -36,7 +36,7 @@ export async function createEmployee(employee: EmployeeInsert): Promise<Employee
 }
 
 export async function updateEmployee(id: string, updates: EmployeeUpdate): Promise<Employee> {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data, error } = await supabase
     .from('employees')
     .update({ ...updates, updated_at: new Date().toISOString() })
@@ -49,13 +49,13 @@ export async function updateEmployee(id: string, updates: EmployeeUpdate): Promi
 }
 
 export async function deleteEmployee(id: string): Promise<void> {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { error } = await supabase.from('employees').delete().eq('id', id);
   if (error) throw error;
 }
 
 export async function createTask(task: TaskInsert): Promise<Task> {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data, error } = await supabase
     .from('tasks')
     .insert(task)
@@ -67,7 +67,7 @@ export async function createTask(task: TaskInsert): Promise<Task> {
 }
 
 export async function updateTask(id: string, updates: TaskUpdate): Promise<Task> {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data, error } = await supabase
     .from('tasks')
     .update({ ...updates, updated_at: new Date().toISOString() })
@@ -80,7 +80,7 @@ export async function updateTask(id: string, updates: TaskUpdate): Promise<Task>
 }
 
 export async function deleteTask(id: string): Promise<void> {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { error } = await supabase.from('tasks').delete().eq('id', id);
   if (error) throw error;
 }
@@ -94,7 +94,7 @@ export async function resizeTask(id: string, durationHours: number, startHour: n
 }
 
 export async function reorderEmployees(employeeIds: string[]): Promise<void> {
-  const supabase = createClient();
+  const supabase = await createClient();
   // Update order by using a transaction-like approach with position field
   // For simplicity, we'll update each employee with a position
   for (let i = 0; i < employeeIds.length; i++) {
