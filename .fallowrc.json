@@ -1,0 +1,6 @@
+{
+  "rules": {
+    "boundary-violation": "off",
+    "policy-violation": "off"
+  }
+}

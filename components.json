@@ -1,16 +1,21 @@
 {
   "$schema": "https://ui.shadcn.com/schema.json",
-  "style": "default",
+  "style": "radix-mira",
   "rsc": false,
   "tsx": true,
   "tailwind": {
     "config": "tailwind.config.ts",
     "css": "src/styles.css",
-    "baseColor": "slate",
+    "baseColor": "mist",
     "cssVariables": true
   },
+  "iconLibrary": "lucide",
+  "rtl": true,
   "aliases": {
     "components": "@/components",
     "utils": "@/lib/utils"
-  }
+  },
+  "menuColor": "default",
+  "menuAccent": "bold",
+  "registries": {}
 }
