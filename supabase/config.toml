@@ -1,0 +1,9 @@
+{
+  "projectId": "your-project-id",
+  "db": {
+    "migrationsDir": "supabase/migrations"
+  },
+  "functions": {
+    "dir": "supabase/functions"
+  }
+}
