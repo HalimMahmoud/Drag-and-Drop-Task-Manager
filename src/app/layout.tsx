@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import '../styles.css';
+import { AuthProvider } from '@/components/AuthProvider';
 
 export const metadata: Metadata = {
   title: 'Horizontal Task Board',
@@ -27,7 +28,9 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body>{children}</body>
+      <body>
+        <AuthProvider>{children}</AuthProvider>
+      </body>
     </html>
   );
 }

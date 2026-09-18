@@ -4,6 +4,7 @@ import { Redo2, Undo2, UserPlus } from 'lucide-react';
 import TimelineRangeSelector from './TimelineRangeSelector';
 import { SupervisorToggle } from './SupervisorToggle';
 import { ThemeToggle } from './ThemeToggle';
+import { UserMenu } from './UserMenu';
 
 interface HeaderProps {
   supervisorMode: boolean;
@@ -80,6 +81,7 @@ export default function Header({
           )}
           <SupervisorToggle checked={supervisorMode} onChange={onSupervisorModeChange} />
           <ThemeToggle />
+          <UserMenu />
         </div>
       </div>
 
