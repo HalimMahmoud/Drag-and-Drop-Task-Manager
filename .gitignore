@@ -77,3 +77,4 @@ ehthumbs.db
 *.pem
 *.key
 .fallowrc.json
+test-results/
