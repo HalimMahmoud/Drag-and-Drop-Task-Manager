@@ -76,3 +76,4 @@ ehthumbs.db
 .fallow/
 *.pem
 *.key
+.fallowrc.json
