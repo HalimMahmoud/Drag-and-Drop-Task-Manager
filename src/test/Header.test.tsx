@@ -10,6 +10,7 @@ const noop = vi.fn();
 const renderHeader = (props: Partial<Parameters<typeof Header>[0]> = {}) =>
   render(
     <Header
+      isAuthenticated={true}
       supervisorMode={false}
       onSupervisorModeChange={noop}
       onAddEmployee={noop}

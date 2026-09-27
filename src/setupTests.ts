@@ -4,6 +4,47 @@ import { ReactNode } from 'react';
 import { render, RenderOptions } from '@testing-library/react';
 import { AuthProvider } from '@/components/AuthProvider';
 
+// Mock Supabase environment variables for tests
+process.env.NEXT_PUBLIC_SUPABASE_URL = 'http://localhost:54321';
+process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = 'test_anon_key';
+
+// Mock Next.js router
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    prefetch: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+  }),
+  usePathname: () => '/',
+  useSearchParams: () => new URLSearchParams(),
+}));
+
+const mockUser = {
+  id: 'test-user-id',
+  email: 'test@example.com',
+  user_metadata: { full_name: 'Test User' },
+};
+
+// Mock Supabase client
+vi.mock('@/lib/supabase/client', () => ({
+  createClient: vi.fn(() => ({
+    auth: {
+      getSession: vi.fn().mockResolvedValue({
+        data: { session: { user: mockUser } },
+        error: null,
+      }),
+      onAuthStateChange: vi.fn((callback) => {
+        callback('SIGNED_IN', { user: mockUser });
+        return { data: { subscription: { unsubscribe: vi.fn() } } };
+      }),
+      signOut: vi.fn().mockResolvedValue({ error: null }),
+    },
+  })),
+}));
+
 afterEach(() => cleanup());
 
 vi.mock('@atlaskit/pragmatic-drag-and-drop/element/adapter', () => ({

@@ -33,14 +33,18 @@ export interface UseTaskBoardReturn {
   deleteEmployee: (employeeId: string) => void;
 }
 
-export function useTaskBoard(initialEmployees: Employee[], initialTasks: Task[]): UseTaskBoardReturn {
+export function useTaskBoard(
+  initialEmployees: Employee[],
+  initialTasks: Task[],
+  initialTimelineRange: TimelineRange = DEFAULT_TIMELINE_RANGE
+): UseTaskBoardReturn {
   const [state, dispatch] = useReducer(boardReducer, {
     employees: initialEmployees,
     tasks: initialTasks,
     past: [],
     future: [],
   } satisfies BoardState);
-  const [timelineRange, setTimelineRangeState] = useState(DEFAULT_TIMELINE_RANGE);
+  const [timelineRange, setTimelineRangeState] = useState(initialTimelineRange);
   const boardRef = useRef<HTMLDivElement>(null);
   const hourWidth = useTimelineWidth(boardRef, timelineRange.endHour - timelineRange.startHour);
 

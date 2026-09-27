@@ -1,12 +1,15 @@
 import type { TimelineRange } from '../../types';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Redo2, Undo2, UserPlus } from 'lucide-react';
+import { Redo2, Undo2, UserPlus, ArrowLeft } from 'lucide-react';
 import TimelineRangeSelector from './TimelineRangeSelector';
 import { SupervisorToggle } from './SupervisorToggle';
 import { ThemeToggle } from './ThemeToggle';
 import { UserMenu } from './UserMenu';
+import { CreateDashboardModal } from '@/components/dashboard/CreateDashboardModal';
 
 interface HeaderProps {
+  isAuthenticated: boolean;
   supervisorMode: boolean;
   onSupervisorModeChange: (value: boolean) => void;
   onAddEmployee: () => void;
@@ -17,9 +20,12 @@ interface HeaderProps {
   canRedo?: boolean;
   onUndo?: () => void;
   onRedo?: () => void;
+  boardTitle?: string;
+  dashboardId?: string;
 }
 
 export default function Header({
+  isAuthenticated,
   supervisorMode,
   onSupervisorModeChange,
   onAddEmployee,
@@ -30,18 +36,43 @@ export default function Header({
   canRedo = false,
   onUndo,
   onRedo,
+  boardTitle = 'Horizontal Task Board',
+  dashboardId,
 }: HeaderProps) {
   return (
     <header className="header">
       <div className="header__top">
         <div>
-          <h1>Horizontal Task Board</h1>
-          <p>Drag tasks to any hour slot · Resize with handles · Drag rows to reorder</p>
+          <div className="flex items-center gap-2">
+            {dashboardId && (
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                className="h-7 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground shrink-0"
+              >
+                <Link href="/" title="Back to All Boards">
+                  <ArrowLeft className="size-3.5" />
+                  <span className="hidden sm:inline">All Boards</span>
+                </Link>
+              </Button>
+            )}
+            <h1>{boardTitle}</h1>
+          </div>
+          {supervisorMode ? (
+            <p>Drag tasks to any hour slot · Resize with handles · Drag rows to reorder</p>
+          ) : (
+            <p>View-only preview mode</p>
+          )}
         </div>
         <div className="legend">
-          <span>⟷ Drag to any hour</span>
-          <span>↕ Move between rows</span>
-          <span>⟺ Resize edges</span>
+          {supervisorMode && (
+            <>
+              <span>⟷ Drag to any hour</span>
+              <span>↕ Move between rows</span>
+              <span>⟺ Resize edges</span>
+            </>
+          )}
           {supervisorMode && (
             <div className="flex items-center gap-1">
               <Button
@@ -79,7 +110,10 @@ export default function Header({
               Add Employee
             </Button>
           )}
-          <SupervisorToggle checked={supervisorMode} onChange={onSupervisorModeChange} />
+          {isAuthenticated && <CreateDashboardModal />}
+          {isAuthenticated && (
+            <SupervisorToggle checked={supervisorMode} onChange={onSupervisorModeChange} />
+          )}
           <ThemeToggle />
           <UserMenu />
         </div>

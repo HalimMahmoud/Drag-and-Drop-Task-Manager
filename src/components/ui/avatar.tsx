@@ -11,6 +11,19 @@ export function Avatar({ className, ...props }: React.ComponentPropsWithoutRef<'
   );
 }
 
+export function AvatarImage({ className, src, alt, ...props }: React.ComponentPropsWithoutRef<'img'>) {
+  if (!src) return null;
+  return (
+    <img
+      data-slot="avatar-image"
+      src={src}
+      alt={alt}
+      className={cn('aspect-square size-full object-cover', className)}
+      {...props}
+    />
+  );
+}
+
 export function AvatarFallback({ className, ...props }: React.ComponentPropsWithoutRef<'div'>) {
   return (
     <div

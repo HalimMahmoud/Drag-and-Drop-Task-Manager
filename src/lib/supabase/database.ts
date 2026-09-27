@@ -6,7 +6,7 @@ export async function getEmployees(): Promise<Employee[]> {
   const { data, error } = await supabase
     .from('employees')
     .select('*')
-    .order('created_at', { ascending: true });
+    .order('position', { ascending: true });
 
   if (error) throw error;
   return data ?? [];
@@ -95,13 +95,15 @@ export async function resizeTask(id: string, durationHours: number, startHour: n
 
 export async function reorderEmployees(employeeIds: string[]): Promise<void> {
   const supabase = await createClient();
-  // Update order by using a transaction-like approach with position field
-  // For simplicity, we'll update each employee with a position
-  for (let i = 0; i < employeeIds.length; i++) {
-    const { error } = await supabase
+  const updates = employeeIds.map((id, index) =>
+    supabase
       .from('employees')
-      .update({ position: i, updated_at: new Date().toISOString() })
-      .eq('id', employeeIds[i]);
+      .update({ position: index, updated_at: new Date().toISOString() })
+      .eq('id', id)
+  );
+
+  const results = await Promise.all(updates);
+  for (const { error } of results) {
     if (error) throw error;
   }
 }
