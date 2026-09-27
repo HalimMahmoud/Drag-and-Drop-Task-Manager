@@ -1,7 +1,9 @@
+'use client';
+
 import { useEffect } from 'react';
-import Header from './components/header/Header';
 import BoardSection from './components/board/BoardSection';
 import { Dialogs } from './components/dialogs/Dialogs';
+import { AppHeader } from './components/layout/AppHeader';
 import { useTaskBoard } from './hooks/board/useTaskBoard';
 import { useAppUiState } from './hooks/board/useAppUiState';
 import { useAuth } from './components/AuthProvider';
@@ -14,6 +16,11 @@ interface AppProps {
   initialEmployees?: Employee[];
   initialTasks?: Task[];
   initialTimelineRange?: TimelineRange;
+  supervisorMode: boolean;
+  onSupervisorModeChange: (value: boolean) => void;
+  showBackButton?: boolean;
+  backHref?: string;
+  extraButton?: React.ReactNode;
 }
 
 export default function App({
@@ -22,46 +29,48 @@ export default function App({
   initialEmployees = [],
   initialTasks = [],
   initialTimelineRange,
+  supervisorMode,
+  onSupervisorModeChange,
+  showBackButton = false,
+  backHref = '/',
+  extraButton,
 }: AppProps) {
   const { user } = useAuth();
-  const isAuthenticated = !!user;
   const board = useTaskBoard(initialEmployees, initialTasks, initialTimelineRange);
   const ui = useAppUiState();
 
-  // Force supervisor mode off when not authenticated
-  const effectiveSupervisorMode = isAuthenticated && ui.supervisorMode;
-
   // Auto-sync dashboard changes to Supabase DB when supervisor makes updates
   useEffect(() => {
-    if (dashboardId && effectiveSupervisorMode) {
+    if (dashboardId && supervisorMode) {
       const timer = setTimeout(() => {
         saveDashboardData(dashboardId, board.employees, board.tasks, board.timelineRange).catch(console.error);
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [dashboardId, effectiveSupervisorMode, board.employees, board.tasks, board.timelineRange]);
+  }, [dashboardId, supervisorMode, board.employees, board.tasks, board.timelineRange]);
 
   return (
     <main className="app">
-      <Header
-        dashboardId={dashboardId}
-        boardTitle={boardTitle}
-        isAuthenticated={isAuthenticated}
-        supervisorMode={effectiveSupervisorMode}
-        onSupervisorModeChange={ui.setSupervisorMode}
+      <AppHeader
+        title={boardTitle}
+        supervisorMode={supervisorMode}
+        onSupervisorModeChange={onSupervisorModeChange}
         onAddEmployee={() => ui.setAddingEmployee(true)}
+        onUndo={board.undo}
+        onRedo={board.redo}
+        canUndo={board.canUndo}
+        canRedo={board.canRedo}
         timelineRange={board.timelineRange}
         onTimelineRangeChange={board.setTimelineRange}
         hiddenTaskCount={board.hiddenTaskCount}
-        canUndo={board.canUndo}
-        canRedo={board.canRedo}
-        onUndo={board.undo}
-        onRedo={board.redo}
+        showBackButton={showBackButton}
+        backHref={backHref}
+        extraButton={extraButton}
       />
 
       <BoardSection
         board={board}
-        supervisorMode={effectiveSupervisorMode}
+        supervisorMode={supervisorMode}
         onEditTask={ui.setEditingTask}
         onDeleteTask={ui.setDeletingTask}
         onAddTask={ui.setAddingTaskFor}

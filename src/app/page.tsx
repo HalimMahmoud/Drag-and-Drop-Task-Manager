@@ -3,20 +3,20 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { getAllDashboards, type DashboardSummary } from '@/lib/supabase/dashboards';
+import { EditDashboardDialog } from '@/components/dashboard/EditDashboardDialog';
 import { CreateDashboardModal } from '@/components/dashboard/CreateDashboardModal';
-import { ThemeToggle } from '@/components/header/ThemeToggle';
-import { UserMenu } from '@/components/header/UserMenu';
+import { AppHeader } from '@/components/layout/AppHeader';
 import { Button } from '@/components/ui/button';
 import {
-  LayoutGrid,
   Search,
   Users,
   CheckSquare,
   ArrowRight,
   Copy,
   Check,
+  Trash2,
+  Pencil,
   Calendar,
-  Layers,
   Sparkles,
   RefreshCw,
 } from 'lucide-react';
@@ -26,6 +26,8 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const loadDashboards = async () => {
     setLoading(true);
@@ -43,6 +45,22 @@ export default function HomePage() {
     loadDashboards();
   }, []);
 
+  const handleDelete = async (id: string) => {
+    setDeleting(true);
+    try {
+      const { deleteDashboard } = await import('@/lib/supabase/dashboards');
+      const ok = await deleteDashboard(id);
+      if (ok) {
+        setDashboards((prev) => prev.filter((d) => d.id !== id));
+      }
+    } catch (err) {
+      console.error('Failed to delete board:', err);
+    } finally {
+      setDeleting(false);
+      setDeletingId(null);
+    }
+  };
+
   const handleCopyLink = (id: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -58,47 +76,12 @@ export default function HomePage() {
   });
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
-      {/* Top Navigation */}
-      <header className="border-b border-border bg-card/60 backdrop-blur-md sticky top-0 z-40">
-        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2.5">
-            <div className="size-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold">
-              <Layers className="size-4" />
-            </div>
-            <div>
-              <span className="font-semibold text-sm tracking-tight text-foreground">
-                Task Timeline
-              </span>
-              <span className="text-xs text-muted-foreground ml-2 hidden sm:inline">
-                PDD Board
-              </span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <CreateDashboardModal />
-            <ThemeToggle />
-            <UserMenu />
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content Area */}
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-8 space-y-6">
-        {/* Hero & Search Header */}
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-2 border-b border-border/60">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-              <LayoutGrid className="size-6 text-primary" />
-              All Boards
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Select a task board to collaborate, view the horizontal timeline, or manage schedules.
-            </p>
-          </div>
-
-          {/* Search bar & Refresh */}
+    <main className="app flex flex-col min-h-screen bg-background text-foreground">
+      <AppHeader
+        title="All Boards"
+        subtitle="Task timelines"
+        showCreateButton={true}
+        rightExtra={
           <div className="flex items-center gap-2">
             <div className="relative w-full sm:w-64">
               <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
@@ -121,7 +104,11 @@ export default function HomePage() {
               <RefreshCw className={`size-3.5 ${loading ? 'animate-spin' : ''}`} />
             </Button>
           </div>
-        </div>
+        }
+      />
+
+      {/* Main Content Area */}
+      <div className="flex-1 w-full space-y-6">
 
         {/* Loading Skeletons */}
         {loading && (
@@ -165,17 +152,50 @@ export default function HomePage() {
                       </div>
                     </div>
 
-                    <button
-                      onClick={(e) => handleCopyLink(board.id, e)}
-                      title="Copy board URL"
-                      className="p-1.5 text-muted-foreground hover:text-foreground rounded hover:bg-muted transition-colors"
-                    >
-                      {copiedId === board.id ? (
-                        <Check className="size-3.5 text-emerald-500" />
-                      ) : (
-                        <Copy className="size-3.5" />
-                      )}
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <EditDashboardDialog
+                        dashboardId={board.id}
+                        currentTitle={board.title}
+                        onSaved={(newId, newTitle) => {
+                          setDashboards((prev) =>
+                            prev.map((d) =>
+                              d.id === board.id
+                                ? { ...d, id: newId, title: newTitle }
+                                : d
+                            )
+                          );
+                        }}
+                        trigger={
+                          <button
+                            title="Edit board"
+                            className="p-1.5 text-muted-foreground hover:text-foreground rounded hover:bg-muted transition-colors"
+                          >
+                            <Pencil className="size-3.5" />
+                          </button>
+                        }
+                      />
+                      <button
+                        onClick={(e) => handleCopyLink(board.id, e)}
+                        title="Copy board URL"
+                        className="p-1.5 text-muted-foreground hover:text-foreground rounded hover:bg-muted transition-colors"
+                      >
+                        {copiedId === board.id ? (
+                          <Check className="size-3.5 text-emerald-500" />
+                        ) : (
+                          <Copy className="size-3.5" />
+                        )}
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeletingId(board.id);
+                        }}
+                        title="Delete board"
+                        className="p-1.5 text-muted-foreground hover:text-destructive rounded hover:bg-destructive/10 transition-colors"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </button>
+                    </div>
                   </div>
 
                   {/* Metadata Stats */}
@@ -245,7 +265,37 @@ export default function HomePage() {
             </div>
           </div>
         )}
-      </main>
-    </div>
+
+        {/* Delete Confirmation Dialog */}
+        {deletingId && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="bg-card border border-border rounded-lg p-6 max-w-sm w-full mx-4 shadow-xl">
+              <h3 className="font-semibold text-foreground mb-2">Delete Board</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Are you sure you want to delete this board? This action cannot be undone.
+              </p>
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setDeletingId(null)}
+                  disabled={deleting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => handleDelete(deletingId)}
+                  disabled={deleting}
+                >
+                  {deleting ? 'Deleting...' : 'Delete'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </main>
   );
 }

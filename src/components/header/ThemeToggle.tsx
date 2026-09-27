@@ -10,15 +10,15 @@ export function ThemeToggle() {
   return (
     <Button
       variant="outline"
-      size="sm"
+      size="icon"
       onClick={toggleTheme}
       aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-      className="h-8 w-8 px-0"
+      className="size-8"
     >
       {theme === 'light' ? (
         <Moon className="size-4 transition-transform hover:-rotate-12" />
       ) : (
-        <Sun className="size-4 text-amber-400 transition-transform hover:rotate-45" />
+        <Sun className="size-4 text-primary transition-transform hover:rotate-45" />
       )}
     </Button>
   );

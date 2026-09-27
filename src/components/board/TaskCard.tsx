@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { ItemMenu } from '@/components/ItemMenu';
 import { useTheme } from '../../hooks/useTheme';
-import { getColorByName, getColorVariant } from '../../utils/colorPalette';
+import { getColorByName, getColorVariant, withOpacity } from '../../utils/colorPalette';
 
 interface TaskCardProps {
   task: Task;
@@ -114,6 +114,9 @@ export default function TaskCard({ task, rowTasks, onResize, onEditTask, onDelet
   const taskColors = taskColorVariant ? getColorVariant(taskColorVariant, theme) : null;
   const accentColor = taskColors?.border ?? priorityColors.border;
   const dimColor = taskColors?.dim ?? priorityColors.dim;
+  const bgColor = taskColors?.border
+    ? withOpacity(taskColors.border, 0.3)
+    : priorityColors.dim;
 
   return (
     <div
@@ -122,8 +125,8 @@ export default function TaskCard({ task, rowTasks, onResize, onEditTask, onDelet
       style={{
         left: `${toTimelinePercent(task.startHour, timelineRange)}%`,
         width: `${toTimelinePercent(timelineRange.startHour + task.durationHours, timelineRange)}%`,
-        backgroundColor: 'var(--color-card)',
-        boxShadow: `inset 0 0 0 1000px ${dimColor}`,
+        backgroundColor: bgColor,
+        boxShadow: `inset 0 0 0 1000px ${bgColor}`,
       }}
       data-task-id={task.id}
     >

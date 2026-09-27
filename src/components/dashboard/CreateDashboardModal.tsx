@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
 import { createDashboard } from '@/lib/supabase/dashboards';
-import { EMPLOYEES as initialEmployees, INITIAL_TASKS as initialTasks } from '@/utils/seed';
+import { slugify } from '@/utils/slugify';
 import { Button } from '@/components/ui/button';
 import { Plus, LayoutGrid } from 'lucide-react';
 import {
@@ -17,15 +17,13 @@ import {
 } from '@/components/ui/dialog';
 
 interface CreateDashboardModalProps {
-  initialId?: string;
   trigger?: React.ReactNode;
 }
 
-export function CreateDashboardModal({ initialId = '', trigger }: CreateDashboardModalProps = {}) {
+export function CreateDashboardModal({ trigger }: CreateDashboardModalProps = {}) {
   const { user } = useAuth();
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [dashboardId, setDashboardId] = useState(initialId);
   const [title, setTitle] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,31 +32,27 @@ export function CreateDashboardModal({ initialId = '', trigger }: CreateDashboar
     e.preventDefault();
     setError(null);
 
-    const cleanId = dashboardId.trim().toLowerCase().replace(/[^a-z0-9-_]/g, '-');
-    if (!cleanId) {
-      setError('Please enter a valid Dashboard ID.');
+    if (!title.trim()) {
+      setError('Please enter a board title.');
       return;
     }
 
     setLoading(true);
     const res = await createDashboard(
-      cleanId,
-      title.trim() || 'Horizontal Task Board',
-      user?.id || '',
-      initialEmployees,
-      initialTasks
+      title.trim(),
+      user?.id || ''
     );
 
     setLoading(false);
     if (!res.success) {
-      setError(res.error || 'Failed to create dashboard. ID may already be taken.');
+      setError(res.error || 'Failed to create board.');
       return;
     }
 
     setOpen(false);
-    setDashboardId('');
     setTitle('');
-    router.push(`/${cleanId}`);
+    router.push(`/${res.dashboardId}`);
+    router.refresh();
   };
 
   if (!user) {
@@ -96,7 +90,7 @@ export function CreateDashboardModal({ initialId = '', trigger }: CreateDashboar
             Create New Task Board
           </DialogTitle>
           <DialogDescription>
-            Enter a unique Board ID (URL path) and title for your dashboard.
+            A new board will be created with a dummy employee and task. You can edit or delete them after.
           </DialogDescription>
         </DialogHeader>
 
@@ -118,29 +112,13 @@ export function CreateDashboardModal({ initialId = '', trigger }: CreateDashboar
               onChange={(e) => setTitle(e.target.value)}
               className="w-full px-3 py-2 text-sm border rounded-md bg-background border-input focus:outline-none focus:ring-2 focus:ring-ring"
               required
+              autoFocus
             />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-foreground mb-1">
-              Custom Board ID (URL Path)
-            </label>
-            <div className="flex items-center">
-              <span className="text-xs text-muted-foreground bg-muted px-2.5 py-2 border border-r-0 rounded-l-md">
-                /
-              </span>
-              <input
-                type="text"
-                placeholder="sprint-24"
-                value={dashboardId}
-                onChange={(e) => setDashboardId(e.target.value.toLowerCase().replace(/\s+/g, '-'))}
-                className="w-full px-3 py-2 text-sm border rounded-r-md bg-background border-input focus:outline-none focus:ring-2 focus:ring-ring font-mono"
-                required
-              />
-            </div>
-            <p className="text-[11px] text-muted-foreground mt-1">
-              Your board will be accessible at: <code>/{dashboardId || 'your-board-id'}</code>
-            </p>
+            {title.trim() && (
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Board URL: <code>/{slugify(title.trim())}</code>
+              </p>
+            )}
           </div>
 
           <div className="flex justify-end gap-2 pt-2">

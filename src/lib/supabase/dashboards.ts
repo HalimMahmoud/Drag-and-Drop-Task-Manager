@@ -1,4 +1,7 @@
 import { createClient } from './client';
+import { nanoid } from 'nanoid';
+import { taskIdGenerator } from '@/utils/taskLayout';
+import { slugify } from '@/utils/slugify';
 import type { Employee, Task, TimelineRange } from '@/types';
 
 export interface DashboardData {
@@ -68,18 +71,28 @@ export async function getDashboard(dashboardId: string): Promise<DashboardData |
 }
 
 export async function createDashboard(
-  id: string,
   title: string,
   ownerId: string,
-  seedEmployees: Employee[] = [],
-  seedTasks: Task[] = [],
   config: TimelineRange = { startHour: 0, endHour: 12 }
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; dashboardId?: string; error?: string }> {
   const supabase = createClient();
+  const slug = slugify(title);
+  const dashboardId = slug || nanoid(10);
+
+  // Check if slug already exists
+  const { data: existing } = await supabase
+    .from('dashboards')
+    .select('id')
+    .eq('id', dashboardId)
+    .maybeSingle();
+
+  if (existing) {
+    return { success: false, error: 'A board with that URL already exists. Please choose a different title.' };
+  }
 
   // 1. Insert dashboard
   const { error: dashError } = await supabase.from('dashboards').insert({
-    id,
+    id: dashboardId,
     owner_id: ownerId,
     title,
     config,
@@ -90,51 +103,48 @@ export async function createDashboard(
     if (dashError.message?.includes('schema cache') || dashError.message?.includes('does not exist')) {
       return {
         success: false,
-        error: 'Database tables not found. Please run the SQL schema in supabase/schema.sql in your Supabase SQL Editor.',
+        error: 'Database tables not found. Please run the SQL schema in supabase/migrations/001_initial_schema.sql in your Supabase SQL Editor.',
       };
     }
     return { success: false, error: dashError.message };
   }
 
-  // 2. Insert initial employees if any
-  if (seedEmployees.length > 0) {
-    const empRows = seedEmployees.map((e, idx) => ({
-      id: e.id,
-      dashboard_id: id,
-      name: e.name,
-      role: e.role,
-      color: e.color,
-      position_order: idx,
-    }));
-    const { error: empError } = await supabase.from('employees').insert(empRows);
-    if (empError) {
-      await supabase.from('dashboards').delete().eq('id', id);
-      return { success: false, error: `Failed to insert initial employees: ${empError.message}` };
-    }
+  // 2. Insert one dummy employee
+  const dummyEmployeeId = nanoid(8);
+  const { error: empError } = await supabase.from('employees').insert({
+    id: dummyEmployeeId,
+    dashboard_id: dashboardId,
+    name: 'Team Member',
+    role: 'Member',
+    color: 'blue',
+    position_order: 0,
+  });
+
+  if (empError) {
+    await supabase.from('dashboards').delete().eq('id', dashboardId);
+    return { success: false, error: `Failed to insert initial employee: ${empError.message}` };
   }
 
-  // 3. Insert initial tasks if any
-  if (seedTasks.length > 0) {
-    const taskRows = seedTasks.map((t) => ({
-      id: t.id,
-      dashboard_id: id,
-      employee_id: t.employeeId,
-      title: t.title,
-      description: t.description,
-      priority: t.priority,
-      start_hour: t.startHour,
-      duration_hours: t.durationHours,
-      color: t.color,
-    }));
-    const { error: taskError } = await supabase.from('tasks').insert(taskRows);
-    if (taskError) {
-      await supabase.from('employees').delete().eq('dashboard_id', id);
-      await supabase.from('dashboards').delete().eq('id', id);
-      return { success: false, error: `Failed to insert initial tasks: ${taskError.message}` };
-    }
+  // 3. Insert one dummy task using taskIdGenerator
+  const { error: taskError } = await supabase.from('tasks').insert({
+    id: taskIdGenerator(),
+    dashboard_id: dashboardId,
+    employee_id: dummyEmployeeId,
+    title: 'Welcome Task',
+    description: 'Edit or delete this task to get started',
+    priority: 'Medium',
+    start_hour: 0,
+    duration_hours: 1,
+    color: 'blue',
+  });
+
+  if (taskError) {
+    await supabase.from('employees').delete().eq('dashboard_id', dashboardId);
+    await supabase.from('dashboards').delete().eq('id', dashboardId);
+    return { success: false, error: `Failed to insert initial task: ${taskError.message}` };
   }
 
-  return { success: true };
+  return { success: true, dashboardId };
 }
 
 export async function saveDashboardData(
@@ -244,5 +254,91 @@ export async function deleteDashboard(dashboardId: string): Promise<boolean> {
   const supabase = createClient();
   const { error } = await supabase.from('dashboards').delete().eq('id', dashboardId);
   return !error;
+}
+
+export async function updateDashboard(
+  dashboardId: string,
+  updates: { title?: string; newId?: string }
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = createClient();
+
+  // If renaming the slug, we need to update the dashboard ID and cascade to children
+  if (updates.newId && updates.newId !== dashboardId) {
+    // Check if new ID already exists
+    const { data: existing } = await supabase
+      .from('dashboards')
+      .select('id')
+      .eq('id', updates.newId)
+      .maybeSingle();
+
+    if (existing) {
+      return { success: false, error: 'A board with that URL already exists.' };
+    }
+
+    // Step 1: Get current dashboard data
+    const { data: currentDash } = await supabase
+      .from('dashboards')
+      .select('*')
+      .eq('id', dashboardId)
+      .maybeSingle();
+
+    if (!currentDash) {
+      return { success: false, error: 'Board not found.' };
+    }
+
+    // Step 2: Insert new dashboard record first (so RLS passes for children)
+    const { error: insertError } = await supabase.from('dashboards').insert({
+      id: updates.newId,
+      owner_id: currentDash.owner_id,
+      title: updates.title || currentDash.title,
+      config: currentDash.config,
+      is_public: currentDash.is_public,
+    });
+
+    if (insertError) return { success: false, error: insertError.message };
+
+    // Step 3: Update employees to point to new dashboard_id
+    const { error: empError } = await supabase
+      .from('employees')
+      .update({ dashboard_id: updates.newId })
+      .eq('dashboard_id', dashboardId);
+    if (empError) {
+      await supabase.from('dashboards').delete().eq('id', updates.newId);
+      return { success: false, error: empError.message };
+    }
+
+    // Step 4: Update tasks to point to new dashboard_id
+    const { error: taskError } = await supabase
+      .from('tasks')
+      .update({ dashboard_id: updates.newId })
+      .eq('dashboard_id', dashboardId);
+    if (taskError) {
+      await supabase.from('employees').update({ dashboard_id: dashboardId }).eq('dashboard_id', updates.newId);
+      await supabase.from('dashboards').delete().eq('id', updates.newId);
+      return { success: false, error: taskError.message };
+    }
+
+    // Step 5: Delete the old dashboard record
+    const { error: deleteError } = await supabase
+      .from('dashboards')
+      .delete()
+      .eq('id', dashboardId);
+
+    if (deleteError) return { success: false, error: deleteError.message };
+
+    return { success: true };
+  }
+
+  // Just update the title
+  const { error } = await supabase
+    .from('dashboards')
+    .update({
+      title: updates.title,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', dashboardId);
+
+  if (error) return { success: false, error: error.message };
+  return { success: true };
 }
 

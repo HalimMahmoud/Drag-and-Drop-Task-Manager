@@ -18,8 +18,8 @@ export function DialogFooterButtons({
 }: DialogFooterButtonsProps) {
   return (
     <DialogFooter>
-      <Button variant="outline" onClick={onCancel}>Cancel</Button>
-      <Button variant={destructive ? 'destructive' : 'default'} onClick={onSave} disabled={disabled}>
+      <Button variant="outline" size="sm" onClick={onCancel}>Cancel</Button>
+      <Button variant={destructive ? 'destructive' : 'default'} size="sm" onClick={onSave} disabled={disabled}>
         {saveLabel}
       </Button>
     </DialogFooter>

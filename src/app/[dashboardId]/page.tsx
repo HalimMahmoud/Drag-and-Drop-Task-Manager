@@ -2,10 +2,11 @@
 
 import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import App from '@/App';
 import { getDashboard, type DashboardData } from '@/lib/supabase/dashboards';
 import { EMPLOYEES, INITIAL_TASKS } from '@/utils/seed';
-import { CreateDashboardModal } from '@/components/dashboard/CreateDashboardModal';
+import { EditDashboardDialog } from '@/components/dashboard/EditDashboardDialog';
 import { Button } from '@/components/ui/button';
 import { LayoutGrid, ArrowLeft, Loader2 } from 'lucide-react';
 
@@ -17,6 +18,8 @@ export default function DashboardPage({
   const { dashboardId } = use(params);
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [supervisorMode, setSupervisorMode] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     let mounted = true;
@@ -41,17 +44,17 @@ export default function DashboardPage({
 
   if (loading) {
     return (
-      <div className="flex h-screen w-screen flex-col items-center justify-center bg-background text-muted-foreground gap-3">
+      <main className="app flex h-screen w-screen flex-col items-center justify-center bg-background text-muted-foreground gap-3">
         <Loader2 className="size-6 animate-spin text-primary" />
         <span className="text-sm font-medium">Loading board /{dashboardId}...</span>
-      </div>
+      </main>
     );
   }
 
   // If dashboard does not exist in DB
   if (!data) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4 text-center">
+      <main className="app flex min-h-screen flex-col items-center justify-center bg-background px-4 text-center">
         <div className="mx-auto max-w-md space-y-4 p-8 rounded-2xl border border-border bg-card shadow-sm">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
             <LayoutGrid className="size-6" />
@@ -71,10 +74,9 @@ export default function DashboardPage({
                 All Boards
               </Link>
             </Button>
-            <CreateDashboardModal initialId={dashboardId} />
           </div>
         </div>
-      </div>
+      </main>
     );
   }
 
@@ -87,6 +89,23 @@ export default function DashboardPage({
       initialEmployees={data.employees?.length ? data.employees : EMPLOYEES}
       initialTasks={data.tasks?.length ? data.tasks : INITIAL_TASKS}
       initialTimelineRange={data.config || { startHour: 0, endHour: 12 }}
+      supervisorMode={supervisorMode}
+      onSupervisorModeChange={setSupervisorMode}
+      showBackButton={true}
+      backHref="/"
+      extraButton={
+        <EditDashboardDialog
+          dashboardId={dashboardId}
+          currentTitle={data.title || ''}
+          onSaved={(newId, newTitle) => {
+            if (newId !== dashboardId) {
+              router.push(`/${newId}`);
+            } else {
+              setData((prev) => prev ? { ...prev, title: newTitle } : prev);
+            }
+          }}
+        />
+      }
     />
   );
 }
