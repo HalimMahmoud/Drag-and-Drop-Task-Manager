@@ -2,14 +2,14 @@ import { act, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
 import { extractClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge';
-import type { Employee, Task, TimelineRange } from '../types';
+import type { Employee, Task, TimelineConfig } from '../types';
 import EmployeeRow from '../components/board/EmployeeRow';
 
 const employee: Employee = { id: 'e1', name: 'Alice', role: 'Frontend Developer', color: 'blue' };
-const range: TimelineRange = { startHour: 0, endHour: 12 };
+const config: TimelineConfig = { unit: 'hours', startSlot: 0, endSlot: 12 };
 const tasks: Task[] = [
-  { id: 't1', employeeId: 'e1', title: 'Login page', priority: 'High', durationHours: 2, startHour: 0, color: 'red' },
-  { id: 't2', employeeId: 'e1', title: 'Dashboard', priority: 'Low', durationHours: 2, startHour: 4, color: 'orange' },
+  { id: 't1', employeeId: 'e1', title: 'Login page', priority: 'High', durationSlot: 2, startSlot: 0, color: 'red' },
+  { id: 't2', employeeId: 'e1', title: 'Dashboard', priority: 'Low', durationSlot: 2, startSlot: 4, color: 'orange' },
 ];
 
 const noop = vi.fn();
@@ -28,7 +28,7 @@ const renderRow = (overrides: Partial<Parameters<typeof EmployeeRow>[0]> = {}) =
       onEditEmployee={noop}
       onDeleteEmployee={noop}
       supervisorMode={false}
-      timelineRange={range}
+      timelineConfig={config}
       {...overrides}
     />,
   );
@@ -38,7 +38,7 @@ const taskDropTarget = () => vi.mocked(dropTargetForElements).mock.calls.at(-1)?
 
 const rowSource = { data: { type: 'row', employeeId: 'e2' } };
 const taskSource = {
-  data: { type: 'task', taskId: 't1', employeeId: 'e1', startHour: 0, durationHours: 2, dragOffsetX: 0 },
+  data: { type: 'task', taskId: 't1', employeeId: 'e1', startSlot: 0, durationSlot: 2, dragOffsetX: 0 },
 };
 
 describe('EmployeeRow: rendering', () => {
@@ -128,18 +128,18 @@ describe('EmployeeRow: task drop targets', () => {
     vi.clearAllMocks();
   });
 
-  it('places a task at the target hour announced by the drop data', () => {
+  it('places a task at the target slot announced by the drop data', () => {
     const onPlaceTask = vi.fn();
     renderRow({ supervisorMode: true, onPlaceTask });
 
-    act(() => taskDropTarget()?.onDrop?.({ source: taskSource, self: { data: { targetStartHour: 10 } } } as never));
+    act(() => taskDropTarget()?.onDrop?.({ source: taskSource, self: { data: { targetStartSlot: 10 } } } as never));
     expect(onPlaceTask).toHaveBeenCalledWith('t1', 'e1', 10);
   });
 
   it('keeps the drop indicator while dragging over the task area', () => {
     const { container } = renderRow({ supervisorMode: true });
 
-    act(() => taskDropTarget()?.onDragEnter?.({ source: taskSource, self: { data: { targetStartHour: 10 } } } as never));
+    act(() => taskDropTarget()?.onDragEnter?.({ source: taskSource, self: { data: { targetStartSlot: 10 } } } as never));
     expect(container.querySelector('.drop-indicator')).toBeDefined();
     expect((container.querySelector('.drop-indicator') as HTMLElement).style.left).toBe('83.33333333333334%');
 
@@ -147,11 +147,11 @@ describe('EmployeeRow: task drop targets', () => {
     expect(container.querySelector('.drop-indicator')).toBeNull();
   });
 
-  it('rejects a task drop without a valid target hour', () => {
+  it('rejects a task drop without a valid target slot', () => {
     const onPlaceTask = vi.fn();
     renderRow({ supervisorMode: true, onPlaceTask });
 
-    act(() => taskDropTarget()?.onDrop?.({ source: taskSource, self: { data: { targetStartHour: null } } } as never));
+    act(() => taskDropTarget()?.onDrop?.({ source: taskSource, self: { data: { targetStartSlot: null } } } as never));
     expect(onPlaceTask).not.toHaveBeenCalled();
   });
 
@@ -161,9 +161,9 @@ describe('EmployeeRow: task drop targets', () => {
     const element = { getBoundingClientRect: () => ({ width: 400, left: 0 }) } as never;
 
     const canDrop = taskDropTarget()?.canDrop?.({ input, source: taskSource, element } as never);
-    const data = taskDropTarget()?.getData?.({ input, source: taskSource, element } as never) as { targetStartHour: number | null };
+    const data = taskDropTarget()?.getData?.({ input, source: taskSource, element } as never) as { targetStartSlot: number | null };
 
     expect(canDrop).toBe(true);
-    expect(data.targetStartHour).toBe(10);
+    expect(data.targetStartSlot).toBe(10);
   });
 });

@@ -1,14 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { Layers, LayoutGrid, Plus, UserPlus, Undo2, Redo2 } from 'lucide-react';
+import { ArrowLeft, Layers, UserPlus, Undo2, Redo2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/header/ThemeToggle';
 import { UserMenu } from '@/components/header/UserMenu';
 import { CreateDashboardModal } from '@/components/dashboard/CreateDashboardModal';
 import { SupervisorToggle } from '@/components/header/SupervisorToggle';
 import TimelineRangeSelector from '@/components/header/TimelineRangeSelector';
-import type { TimelineRange } from '../../types';
+import type { TimelineConfig } from '../../types';
 
 interface AppHeaderProps {
   title?: string;
@@ -16,6 +16,7 @@ interface AppHeaderProps {
   showCreateButton?: boolean;
   showBackButton?: boolean;
   backHref?: string;
+  backLabel?: string;
   supervisorMode?: boolean;
   onSupervisorModeChange?: (value: boolean) => void;
   onAddEmployee?: () => void;
@@ -23,19 +24,20 @@ interface AppHeaderProps {
   canRedo?: boolean;
   onUndo?: () => void;
   onRedo?: () => void;
-  timelineRange?: TimelineRange;
-  onTimelineRangeChange?: (range: TimelineRange) => void;
+  timelineConfig?: TimelineConfig;
+  onTimelineConfigChange?: (config: TimelineConfig) => void;
   hiddenTaskCount?: number;
   extraButton?: React.ReactNode;
   rightExtra?: React.ReactNode;
 }
 
 export function AppHeader({
-  title = 'Task Timeline',
-  subtitle = 'PDD Board',
+  title = 'Team Task Board',
+  subtitle,
   showCreateButton = true,
   showBackButton = false,
   backHref = '/',
+  backLabel = 'All Boards',
   supervisorMode = false,
   onSupervisorModeChange,
   onAddEmployee,
@@ -43,8 +45,8 @@ export function AppHeader({
   canRedo = false,
   onUndo,
   onRedo,
-  timelineRange,
-  onTimelineRangeChange,
+  timelineConfig,
+  onTimelineConfigChange,
   hiddenTaskCount = 0,
   extraButton,
   rightExtra,
@@ -52,27 +54,33 @@ export function AppHeader({
   return (
     <header className="header">
       <div className="header__top w-full px-4 h-14 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2.5">
-          <div className="size-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold">
+        <div className="flex items-center gap-2.5 min-w-0">
+          {showBackButton && (
+            <Button asChild variant="outline" size="sm" className="gap-1.5 shrink-0">
+              <Link href={backHref}>
+                <ArrowLeft className="size-4" />
+                {backLabel}
+              </Link>
+            </Button>
+          )}
+          <div className="size-8 shrink-0 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold">
             <Layers className="size-4" />
           </div>
-          <div>
-            <span className="font-semibold text-sm tracking-tight text-foreground">
+          <div className="min-w-0">
+            <h1 className="m-0 truncate font-semibold text-sm tracking-tight text-foreground">
               {title}
-            </span>
-            <span className="text-xs text-muted-foreground ml-2 hidden sm:inline">
-              {subtitle}
-            </span>
+            </h1>
+            {subtitle && (
+              <p className="m-0 truncate text-xs text-muted-foreground">{subtitle}</p>
+            )}
           </div>
         </div>
 
         <div className="legend flex items-center gap-2">
           {supervisorMode && (
-            <>
-              <span>⟷ Drag to any hour</span>
-              <span>↕ Move between rows</span>
-              <span>⟺ Resize edges</span>
-            </>
+            <p className="m-0 hidden text-xs text-muted-foreground md:block">
+              Drag tasks to any hour · move them between rows · resize either edge
+            </p>
           )}
           {supervisorMode && onUndo && onRedo && (
             <div className="flex items-center gap-1">
@@ -112,13 +120,6 @@ export function AppHeader({
             </Button>
           )}
           {showCreateButton && <CreateDashboardModal />}
-          {showBackButton && (
-            <Button asChild variant="ghost" size="icon" className="h-8 w-8">
-              <Link href={backHref}>
-                <LayoutGrid className="size-4" />
-              </Link>
-            </Button>
-          )}
           {extraButton}
           {rightExtra}
           {onSupervisorModeChange && (
@@ -132,10 +133,10 @@ export function AppHeader({
         </div>
       </div>
 
-      {supervisorMode && timelineRange && onTimelineRangeChange && (
+      {supervisorMode && timelineConfig && onTimelineConfigChange && (
         <TimelineRangeSelector
-          timelineRange={timelineRange}
-          onTimelineRangeChange={onTimelineRangeChange}
+          timelineConfig={timelineConfig}
+          onTimelineConfigChange={onTimelineConfigChange}
           hiddenTaskCount={hiddenTaskCount}
         />
       )}

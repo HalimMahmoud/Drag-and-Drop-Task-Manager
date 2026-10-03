@@ -1,16 +1,16 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Task, TimelineRange } from '../types';
+import type { Task, TimelineConfig } from '../types';
 import TaskCard from '../components/board/TaskCard';
 
-const range: TimelineRange = { startHour: 0, endHour: 12 };
+const config: TimelineConfig = { unit: 'hours', startSlot: 0, endSlot: 12 };
 const task: Task = {
   id: 't1',
   employeeId: 'e1',
   title: 'Build UI',
   priority: 'High',
-  durationHours: 2,
-  startHour: 3,
+  durationSlot: 2,
+  startSlot: 3,
   color: 'red',
 };
 const noop = vi.fn();
@@ -46,7 +46,7 @@ const renderCard = (overrides: Partial<Parameters<typeof TaskCard>[0]> = {}) =>
       onEditTask={noop}
       onDeleteTask={noop}
       supervisorMode={false}
-      timelineRange={range}
+      timelineConfig={config}
       {...overrides}
     />,
   );
@@ -56,7 +56,7 @@ describe('TaskCard: rendering', () => {
     renderCard();
     expect(screen.getByText('Build UI')).toBeTruthy();
     expect(screen.getByText('High')).toBeTruthy();
-    expect(screen.getByText('3:00–5:00')).toBeTruthy();
+    expect(screen.getByText('03:00\u201305:00')).toBeTruthy();
     expect(screen.getByText('#t1')).toBeTruthy();
   });
 

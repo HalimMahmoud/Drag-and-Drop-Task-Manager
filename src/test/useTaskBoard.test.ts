@@ -52,8 +52,8 @@ describe('useTaskBoard: initialization', () => {
       type: 'task',
       taskId: login.id,
       employeeId: login.employeeId,
-      startHour: login.startHour,
-      durationHours: login.durationHours,
+      startSlot: login.startSlot,
+      durationSlot: login.durationSlot,
       dragOffsetX: 0,
     };
 
@@ -78,8 +78,8 @@ describe('useTaskBoard: addTask success paths', () => {
       created = result.current.addTask('ahmed', {
         title: 'New task',
         priority: 'High',
-        startHour: 5,
-        durationHours: 1,
+        startSlot: 5,
+        durationSlot: 1,
       });
     });
 
@@ -97,8 +97,8 @@ describe('useTaskBoard: addTask success paths', () => {
       result.current.addTask('ali', {
         title: 'Colored task',
         priority: 'Low',
-        startHour: 8,
-        durationHours: 1,
+        startSlot: 8,
+        durationSlot: 1,
         color: 'violet',
       });
     });
@@ -121,8 +121,8 @@ describe('useTaskBoard: addTask validation', () => {
       created = result.current.addTask('ahmed', {
         title: 'Overlap',
         priority: 'Low',
-        startHour: dashboard.startHour + 2,
-        durationHours: 2,
+        startSlot: dashboard.startSlot + 2,
+        durationSlot: 2,
       });
     });
 
@@ -135,11 +135,12 @@ describe('useTaskBoard: addTask validation', () => {
 
     let created = true;
     act(() => {
+      // The default hours board spans all 24 slots, so only an overflow is rejected.
       created = result.current.addTask('ahmed', {
         title: 'Too far',
         priority: 'Low',
-        startHour: 20,
-        durationHours: 1,
+        startSlot: 23,
+        durationSlot: 2,
       });
     });
 
@@ -160,7 +161,7 @@ describe('useTaskBoard: placeTask', () => {
 
     const moved = result.current.tasks.find((t) => t.id === login.id);
     expect(moved?.employeeId).toBe('ali');
-    expect(moved?.startHour).toBe(6);
+    expect(moved?.startSlot).toBe(6);
   });
 
   it('leaves the task untouched when the slot is occupied', () => {
@@ -171,7 +172,7 @@ describe('useTaskBoard: placeTask', () => {
 
     const unchanged = result.current.tasks.find((t) => t.id === login.id);
     expect(unchanged?.employeeId).toBe('ahmed');
-    expect(unchanged?.startHour).toBe(0);
+    expect(unchanged?.startSlot).toBe(0);
   });
 });
 
@@ -184,18 +185,18 @@ describe('useTaskBoard: resizeTask', () => {
     const { result } = setup();
     const dashboard = byTitle(result.current, 'Dashboard')!;
 
-    act(() => result.current.resizeTask(dashboard.id, 3, dashboard.startHour));
+    act(() => result.current.resizeTask(dashboard.id, 3, dashboard.startSlot));
 
-    expect(result.current.tasks.find((t) => t.id === dashboard.id)?.durationHours).toBe(3);
+    expect(result.current.tasks.find((t) => t.id === dashboard.id)?.durationSlot).toBe(3);
   });
 
   it('rejects a resize that collides with a sibling', () => {
     const { result } = setup();
     const dashboard = byTitle(result.current, 'Dashboard')!;
 
-    act(() => result.current.resizeTask(dashboard.id, 4, dashboard.startHour));
+    act(() => result.current.resizeTask(dashboard.id, 4, dashboard.startSlot));
 
-    expect(result.current.tasks.find((t) => t.id === dashboard.id)?.durationHours).toBe(2);
+    expect(result.current.tasks.find((t) => t.id === dashboard.id)?.durationSlot).toBe(2);
   });
 });
 
@@ -268,23 +269,46 @@ describe('useTaskBoard: timeline', () => {
 
   it('reports hidden tasks for the default range', () => {
     const { result } = setup();
-    const expected = INITIAL_TASKS.filter((t) => t.startHour + t.durationHours > 12 || t.startHour < 0).length;
+    // The default hours board spans slots 0-24, so only an overflow is hidden.
+    const expected = INITIAL_TASKS.filter((t) => t.startSlot + t.durationSlot > 24 || t.startSlot < 0).length;
     expect(result.current.hiddenTaskCount).toBe(expected);
   });
 
-  it('ignores invalid range updates', () => {
+  it('ignores an inverted range update', () => {
     const { result } = setup();
 
-    act(() => result.current.setTimelineRange({ startHour: 20, endHour: 5 }));
+    act(() => result.current.setTimelineConfig({ unit: 'hours', startSlot: 20, endSlot: 5 }));
 
-    expect(result.current.timelineRange).toEqual({ startHour: 0, endHour: 12 });
+    expect(result.current.timelineConfig).toEqual({ unit: 'hours', startSlot: 0, endSlot: 24 });
   });
 
-  it('applies valid range updates', () => {
+  it('applies a narrowed custom range', () => {
     const { result } = setup();
 
-    act(() => result.current.setTimelineRange({ startHour: 0, endHour: 24 }));
+    act(() => result.current.setTimelineConfig({ unit: 'hours', startSlot: 9, endSlot: 17 }));
 
-    expect(result.current.timelineRange).toEqual({ startHour: 0, endHour: 24 });
+    expect(result.current.timelineConfig).toEqual({ unit: 'hours', startSlot: 9, endSlot: 17 });
+  });
+
+  it('ignores a range that exceeds the capacity of the selected unit', () => {
+    const { result } = setup();
+
+    // 12 days is inside the 31-day capacity, so the narrower window is accepted.
+    act(() => result.current.setTimelineConfig({ unit: 'days', startSlot: 0, endSlot: 12 }));
+    expect(result.current.timelineConfig).toEqual({ unit: 'days', startSlot: 0, endSlot: 12 });
+
+    // 32 days is not, so the previous window is kept rather than clamped.
+    act(() => result.current.setTimelineConfig({ unit: 'days', startSlot: 0, endSlot: 32 }));
+    expect(result.current.timelineConfig).toEqual({ unit: 'days', startSlot: 0, endSlot: 12 });
+  });
+
+  it('widens the window to the whole plan when the unit changes', () => {
+    const { result } = setup();
+
+    act(() => result.current.setTimelineConfig({ unit: 'days', startSlot: 0, endSlot: 31 }));
+
+    expect(result.current.timelineConfig).toEqual({ unit: 'days', startSlot: 0, endSlot: 31 });
+    // Slot values are unchanged by a re-plan; only their meaning shifts.
+    expect(result.current.tasks.every((t) => t.startSlot < 31)).toBe(true);
   });
 });

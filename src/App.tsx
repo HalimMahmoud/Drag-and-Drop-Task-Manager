@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useMemo } from 'react';
 import BoardSection from './components/board/BoardSection';
 import { Dialogs } from './components/dialogs/Dialogs';
 import { AppHeader } from './components/layout/AppHeader';
@@ -8,14 +9,15 @@ import { useTaskBoard } from './hooks/board/useTaskBoard';
 import { useAppUiState } from './hooks/board/useAppUiState';
 import { useAuth } from './components/AuthProvider';
 import { saveDashboardData } from './lib/supabase/dashboards';
-import type { Employee, Task, TimelineRange } from './types';
+import { formatBoardHeadline } from './utils/headlines';
+import type { Employee, Task, TimelineConfig } from './types';
 
 interface AppProps {
   dashboardId?: string;
   boardTitle?: string;
   initialEmployees?: Employee[];
   initialTasks?: Task[];
-  initialTimelineRange?: TimelineRange;
+  initialTimelineConfig?: TimelineConfig;
   supervisorMode: boolean;
   onSupervisorModeChange: (value: boolean) => void;
   showBackButton?: boolean;
@@ -28,7 +30,7 @@ export default function App({
   boardTitle = 'Horizontal Task Board',
   initialEmployees = [],
   initialTasks = [],
-  initialTimelineRange,
+  initialTimelineConfig,
   supervisorMode,
   onSupervisorModeChange,
   showBackButton = false,
@@ -36,41 +38,58 @@ export default function App({
   extraButton,
 }: AppProps) {
   const { user } = useAuth();
-  const board = useTaskBoard(initialEmployees, initialTasks, initialTimelineRange);
+  const board = useTaskBoard(initialEmployees, initialTasks, initialTimelineConfig);
   const ui = useAppUiState();
+
+  // Editing is an authenticated-only capability; signed-out visitors get a read-only board.
+  const canManage = Boolean(user);
+  const canEdit = canManage && supervisorMode;
+
+  // Never leave the board editable after sign-out.
+  useEffect(() => {
+    if (!canManage && supervisorMode) {
+      onSupervisorModeChange(false);
+    }
+  }, [canManage, supervisorMode, onSupervisorModeChange]);
+
+  const headline = useMemo(
+    () => formatBoardHeadline(board.employees, board.tasks, board.timelineConfig),
+    [board.employees, board.tasks, board.timelineConfig]
+  );
 
   // Auto-sync dashboard changes to Supabase DB when supervisor makes updates
   useEffect(() => {
-    if (dashboardId && supervisorMode) {
+    if (dashboardId && canEdit) {
       const timer = setTimeout(() => {
-        saveDashboardData(dashboardId, board.employees, board.tasks, board.timelineRange).catch(console.error);
+        saveDashboardData(dashboardId, board.employees, board.tasks, board.timelineConfig).catch(console.error);
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [dashboardId, supervisorMode, board.employees, board.tasks, board.timelineRange]);
+  }, [dashboardId, canEdit, board.employees, board.tasks, board.timelineConfig]);
 
   return (
     <main className="app">
       <AppHeader
         title={boardTitle}
-        supervisorMode={supervisorMode}
-        onSupervisorModeChange={onSupervisorModeChange}
-        onAddEmployee={() => ui.setAddingEmployee(true)}
-        onUndo={board.undo}
-        onRedo={board.redo}
+        subtitle={headline}
+        supervisorMode={canEdit}
+        onSupervisorModeChange={canManage ? onSupervisorModeChange : undefined}
+        onAddEmployee={canManage ? () => ui.setAddingEmployee(true) : undefined}
+        onUndo={canManage ? board.undo : undefined}
+        onRedo={canManage ? board.redo : undefined}
         canUndo={board.canUndo}
         canRedo={board.canRedo}
-        timelineRange={board.timelineRange}
-        onTimelineRangeChange={board.setTimelineRange}
+        timelineConfig={board.timelineConfig}
+        onTimelineConfigChange={canManage ? board.setTimelineConfig : undefined}
         hiddenTaskCount={board.hiddenTaskCount}
         showBackButton={showBackButton}
         backHref={backHref}
-        extraButton={extraButton}
+        extraButton={canManage ? extraButton : undefined}
       />
 
       <BoardSection
         board={board}
-        supervisorMode={supervisorMode}
+        supervisorMode={canEdit}
         onEditTask={ui.setEditingTask}
         onDeleteTask={ui.setDeletingTask}
         onAddTask={ui.setAddingTaskFor}
@@ -78,7 +97,7 @@ export default function App({
         onDeleteEmployee={ui.setDeletingEmployee}
       />
 
-      <Dialogs board={board} ui={ui} />
+      <Dialogs board={board} ui={ui} supervisorMode={canEdit} />
     </main>
   );
 }

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
 import { isTask, type Task, type TimelineRange } from '../../types';
-import { resolveTaskDropStartHour } from '../../utils/dnd';
+import { resolveTaskDropStartSlot } from '../../utils/dnd';
 
 interface DataArgs {
   source: { data: Record<string, unknown> };
@@ -11,26 +11,26 @@ interface DataArgs {
 const createTaskDropResolver =
   (employeeId: string, getTasks: () => Task[], timelineRange: TimelineRange) =>
   (input: { clientX: number }, source: { data: Record<string, unknown> }, element: Element) =>
-    resolveTaskDropStartHour({ input, source, element, employeeId, tasks: getTasks(), timelineRange });
+    resolveTaskDropStartSlot({ input, source, element, employeeId, tasks: getTasks(), timelineRange });
 
 const onTaskEnter = (setTaskOver: (v: boolean) => void, setIndicator: (v: number | null) => void) => ({ self }: DataArgs) => {
   setTaskOver(true);
-  setIndicator(resolveDropHour(self.data));
+  setIndicator(resolveDropSlot(self.data));
 };
 
 const onTaskDrag = (setIndicator: (v: number | null) => void) => ({ self }: DataArgs) => {
-  setIndicator(resolveDropHour(self.data));
+  setIndicator(resolveDropSlot(self.data));
 };
 
 const onTaskDrop = (
   employeeId: string,
-  onPlaceTask: (taskId: string, employeeId: string, startHour: number) => void,
+  onPlaceTask: (taskId: string, employeeId: string, startSlot: number) => void,
   reset: () => void,
 ) => ({ source, self }: DataArgs) => {
   reset();
-  const targetStartHour = resolveDropHour(self.data);
-  if (isTask(source.data) && typeof targetStartHour === 'number') {
-    onPlaceTask(source.data.taskId, employeeId, targetStartHour);
+  const targetStartSlot = resolveDropSlot(self.data);
+  if (isTask(source.data) && typeof targetStartSlot === 'number') {
+    onPlaceTask(source.data.taskId, employeeId, targetStartSlot);
   }
 };
 
@@ -39,18 +39,18 @@ export function useTaskPlacement(
   employeeId: string,
   timelineRange: TimelineRange,
   tasks: Task[],
-  onPlaceTask: (taskId: string, employeeId: string, startHour: number) => void,
+  onPlaceTask: (taskId: string, employeeId: string, startSlot: number) => void,
   supervisorMode: boolean,
 ) {
   const [taskOver, setTaskOver] = useState(false);
-  const [dropIndicatorHour, setDropIndicatorHour] = useState<number | null>(null);
+  const [dropIndicatorSlot, setDropIndicatorSlot] = useState<number | null>(null);
   const tasksRef = useRef(tasks);
   useEffect(() => {
     tasksRef.current = tasks;
   }, [tasks]);
   const reset = () => {
     setTaskOver(false);
-    setDropIndicatorHour(null);
+    setDropIndicatorSlot(null);
   };
 
   useEffect(() => {
@@ -58,28 +58,28 @@ export function useTaskPlacement(
     const element = taskAreaRef.current;
     if (!element) return;
 
-    const resolveStartHour = createTaskDropResolver(employeeId, () => tasksRef.current, timelineRange);
+    const resolveStartSlot = createTaskDropResolver(employeeId, () => tasksRef.current, timelineRange);
 
     return dropTargetForElements({
       element,
       getDropEffect: () => 'move',
-      canDrop: ({ input, source, element }) => resolveStartHour(input, source, element) !== null,
+      canDrop: ({ input, source, element }) => resolveStartSlot(input, source, element) !== null,
       getData: ({ input, source, element }) => ({
         type: 'task-area' as const,
         employeeId,
-        targetStartHour: resolveStartHour(input, source, element),
+        targetStartSlot: resolveStartSlot(input, source, element),
       }),
-      onDragEnter: onTaskEnter(setTaskOver, setDropIndicatorHour),
-      onDrag: onTaskDrag(setDropIndicatorHour),
+      onDragEnter: onTaskEnter(setTaskOver, setDropIndicatorSlot),
+      onDrag: onTaskDrag(setDropIndicatorSlot),
       onDragLeave: reset,
       onDrop: onTaskDrop(employeeId, onPlaceTask, reset),
     });
   }, [taskAreaRef, employeeId, onPlaceTask, supervisorMode, timelineRange]);
 
-  return { taskOver, dropIndicatorHour };
+  return { taskOver, dropIndicatorSlot };
 }
 
-const resolveDropHour = (data: Record<string, unknown>) => {
-  const hour = data['targetStartHour'];
-  return typeof hour === 'number' ? hour : null;
+const resolveDropSlot = (data: Record<string, unknown>) => {
+  const slot = data['targetStartSlot'];
+  return typeof slot === 'number' ? slot : null;
 };

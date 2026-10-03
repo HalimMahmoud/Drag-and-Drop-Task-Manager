@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
 import { createDashboard } from '@/lib/supabase/dashboards';
 import { slugify } from '@/utils/slugify';
+import { TIME_UNITS, TIME_UNIT_DEFINITIONS, getDefaultTimelineConfig } from '@/utils/timeUnits';
+import type { TimeUnit } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Plus, LayoutGrid } from 'lucide-react';
 import {
@@ -25,6 +27,7 @@ export function CreateDashboardModal({ trigger }: CreateDashboardModalProps = {}
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState('');
+  const [unit, setUnit] = useState<TimeUnit>('hours');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,10 +41,7 @@ export function CreateDashboardModal({ trigger }: CreateDashboardModalProps = {}
     }
 
     setLoading(true);
-    const res = await createDashboard(
-      title.trim(),
-      user?.id || ''
-    );
+    const res = await createDashboard(title.trim(), user?.id || '', getDefaultTimelineConfig(unit));
 
     setLoading(false);
     if (!res.success) {
@@ -51,6 +51,7 @@ export function CreateDashboardModal({ trigger }: CreateDashboardModalProps = {}
 
     setOpen(false);
     setTitle('');
+    setUnit('hours');
     router.push(`/${res.dashboardId}`);
     router.refresh();
   };
@@ -119,6 +120,40 @@ export function CreateDashboardModal({ trigger }: CreateDashboardModalProps = {}
                 Board URL: <code>/{slugify(title.trim())}</code>
               </p>
             )}
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-foreground mb-1">
+              Time plan
+            </label>
+            <div className="flex flex-wrap gap-1.5">
+              {TIME_UNITS.map((option) => {
+                const definition = TIME_UNIT_DEFINITIONS[option];
+                const isActive = option === unit;
+                return (
+                  <button
+                    key={option}
+                    type="button"
+                    aria-pressed={isActive}
+                    onClick={() => setUnit(option)}
+                    className={`rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                      isActive
+                        ? 'border-primary bg-primary text-primary-foreground'
+                        : 'border-input bg-background text-foreground hover:bg-accent'
+                    }`}
+                  >
+                    {definition.label}
+                    <span className="ml-1 opacity-70">
+                      1&ndash;{definition.maxSlots}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-1.5">
+              Schedule work in {TIME_UNIT_DEFINITIONS[unit].plural}, up to{' '}
+              {TIME_UNIT_DEFINITIONS[unit].maxSlots} on the timeline.
+            </p>
           </div>
 
           <div className="flex justify-end gap-2 pt-2">

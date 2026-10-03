@@ -14,7 +14,7 @@ export function AddTaskDialogSlot({ board, ui }: SlotProps) {
       employee={employee}
       tasks={employeeTasks}
       usedColors={usedColors}
-      timelineRange={board.timelineRange}
+      timelineConfig={board.timelineConfig}
       open
       onOpenChange={(open) => !open && ui.setAddingTaskFor(null)}
       onSave={(data) => board.addTask(employee.id, data)}

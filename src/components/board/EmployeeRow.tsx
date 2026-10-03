@@ -1,6 +1,6 @@
 import type { RefObject } from 'react';
 import type { Edge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/types';
-import type { Employee, Task, TimelineRange } from '../../types';
+import type { Employee, Task, TimelineConfig } from '../../types';
 import TaskCard from './TaskCard';
 import EmployeeLabel from './EmployeeLabel';
 import { useEmployeeRowDnd } from '../../hooks/dnd/useEmployeeRowDnd';
@@ -10,35 +10,35 @@ import { cn } from '@/lib/utils';
 interface EmployeeRowProps {
   employee: Employee;
   tasks: Task[];
-  onPlaceTask: (taskId: string, employeeId: string, startHour: number) => void;
+  onPlaceTask: (taskId: string, employeeId: string, startSlot: number) => void;
   onReorderRow: (sourceId: string, destinationId: string, edge: Edge | null) => void;
-  onResizeTask: (taskId: string, durationHours: number, startHour: number) => void;
+  onResizeTask: (taskId: string, durationSlot: number, startSlot: number) => void;
   onEditTask: (task: Task) => void;
   onDeleteTask: (task: Task) => void;
   onAddTask: (employee: Employee) => void;
   onEditEmployee: (employee: Employee) => void;
   onDeleteEmployee: (employee: Employee) => void;
   supervisorMode: boolean;
-  timelineRange: TimelineRange;
+  timelineConfig: TimelineConfig;
 }
 
 interface EmployeeRowTaskAreaProps {
   taskAreaRef: RefObject<HTMLDivElement | null>;
-  dropIndicatorHour: number | null;
+  dropIndicatorSlot: number | null;
   tasks: Task[];
   supervisorMode: boolean;
-  timelineRange: TimelineRange;
-  onResizeTask: (taskId: string, durationHours: number, startHour: number) => void;
+  timelineConfig: TimelineConfig;
+  onResizeTask: (taskId: string, durationSlot: number, startSlot: number) => void;
   onEditTask: (task: Task) => void;
   onDeleteTask: (task: Task) => void;
 }
 
 const EmployeeRowTaskArea = ({
   taskAreaRef,
-  dropIndicatorHour,
+  dropIndicatorSlot,
   tasks,
   supervisorMode,
-  timelineRange,
+  timelineConfig,
   onResizeTask,
   onEditTask,
   onDeleteTask,
@@ -53,11 +53,13 @@ const EmployeeRowTaskArea = ({
         onEditTask={onEditTask}
         onDeleteTask={onDeleteTask}
         supervisorMode={supervisorMode}
-        timelineRange={timelineRange}
+        timelineConfig={timelineConfig}
       />
     ))}
 
-    {dropIndicatorHour !== null && <DropIndicator dropIndicatorHour={dropIndicatorHour} timelineRange={timelineRange} />}
+    {dropIndicatorSlot !== null && (
+      <DropIndicator dropIndicatorSlot={dropIndicatorSlot} timelineRange={timelineConfig} />
+    )}
   </div>
 );
 
@@ -73,12 +75,12 @@ export default function EmployeeRow({
   onEditEmployee,
   onDeleteEmployee,
   supervisorMode,
-  timelineRange,
+  timelineConfig,
 }: EmployeeRowProps) {
-  const { rowRef, dragHandleRef, taskAreaRef, isRowOver, rowEdge, dropIndicatorHour } = useEmployeeRowDnd({
+  const { rowRef, dragHandleRef, taskAreaRef, isRowOver, rowEdge, dropIndicatorSlot } = useEmployeeRowDnd({
     employeeId: employee.id,
     supervisorMode,
-    timelineRange,
+    timelineRange: timelineConfig,
     tasks,
     onPlaceTask,
     onReorderRow,
@@ -105,10 +107,10 @@ export default function EmployeeRow({
 
       <EmployeeRowTaskArea
         taskAreaRef={taskAreaRef}
-        dropIndicatorHour={dropIndicatorHour}
+        dropIndicatorSlot={dropIndicatorSlot}
         tasks={tasks}
         supervisorMode={supervisorMode}
-        timelineRange={timelineRange}
+        timelineConfig={timelineConfig}
         onResizeTask={onResizeTask}
         onEditTask={onEditTask}
         onDeleteTask={onDeleteTask}

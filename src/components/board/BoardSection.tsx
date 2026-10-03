@@ -29,11 +29,11 @@ export default function BoardSection({
         ref={board.boardRef}
         className="board"
         style={{
-          '--hour-width': `${board.hourWidth}px`,
-          '--timeline-hours': String(board.timelineRange.endHour - board.timelineRange.startHour),
+          '--slot-width': `${board.slotWidth}px`,
+          '--timeline-slots': String(board.timelineConfig.endSlot - board.timelineConfig.startSlot),
         } as CSSProperties}
       >
-        <TimeHeader timelineRange={board.timelineRange} />
+        <TimeHeader timelineConfig={board.timelineConfig} />
         {board.employees.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 px-4 text-center border-b border-border/40 bg-card/20">
             <div className="size-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-3">
@@ -66,7 +66,7 @@ export default function BoardSection({
               key={employee.id}
               employee={employee}
               tasks={board.tasksForEmployee(employee.id)}
-              timelineRange={board.timelineRange}
+              timelineConfig={board.timelineConfig}
               onPlaceTask={board.placeTask}
               onReorderRow={board.reorderEmployees}
               onResizeTask={board.resizeTask}

@@ -2,10 +2,10 @@
 
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type RefObject } from 'react';
 import { draggable } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
-import type { Task, DragData, TimelineRange, ColorPaletteName } from '../../types';
+import type { Task, DragData, TimelineConfig, ColorPaletteName } from '../../types';
 import { PRIORITY_COLORS, priorityToColorKey } from '../../utils/taskLayout';
 import { toTimelinePercent } from '../../utils/timelinePercent';
-import { formatHour } from '../../utils/timeFormat';
+import { formatSlotRange } from '../../utils/timeUnits';
 import { computeResizeTarget, type ResizeHandleState } from '../../utils/resize';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -16,20 +16,20 @@ import { getColorByName, getColorVariant, withOpacity } from '../../utils/colorP
 interface TaskCardProps {
   task: Task;
   rowTasks: Task[];
-  onResize: (taskId: string, durationHours: number, startHour: number) => void;
+  onResize: (taskId: string, durationSlot: number, startSlot: number) => void;
   onEditTask: (task: Task) => void;
   onDeleteTask: (task: Task) => void;
   supervisorMode: boolean;
-  timelineRange: TimelineRange;
+  timelineConfig: TimelineConfig;
 }
 
 const useTaskResize = (
   task: Task,
-  onResize: (taskId: string, durationHours: number, startHour: number) => void,
+  onResize: (taskId: string, durationSlot: number, startSlot: number) => void,
   elementRef: RefObject<HTMLDivElement | null>,
   rowTasks: Task[],
   supervisorMode: boolean,
-  timelineRange: TimelineRange,
+  timelineConfig: TimelineConfig,
 ) => {
   const [resizing, setResizing] = useState<ResizeHandleState | null>(null);
 
@@ -40,11 +40,11 @@ const useTaskResize = (
       const parentEl = elementRef.current?.parentElement;
       if (!parentEl) return;
 
-      const hourWidth = parentEl.getBoundingClientRect().width / (timelineRange.endHour - timelineRange.startHour);
-      const deltaHours = Math.round((e.clientX - resizing.startX) / hourWidth);
+      const slotWidth = parentEl.getBoundingClientRect().width / (timelineConfig.endSlot - timelineConfig.startSlot);
+      const deltaSlots = Math.round((e.clientX - resizing.startX) / slotWidth);
       const otherTasks = rowTasks.filter((t) => t.id !== task.id);
-      const target = computeResizeTarget(resizing, deltaHours, otherTasks, timelineRange);
-      if (target) onResize(task.id, target.newDuration, target.newStartHour);
+      const target = computeResizeTarget(resizing, deltaSlots, otherTasks, timelineConfig);
+      if (target) onResize(task.id, target.newDurationSlot, target.newStartSlot);
     };
 
     const handleMouseUp = () => setResizing(null);
@@ -54,7 +54,7 @@ const useTaskResize = (
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [resizing, elementRef, task.id, rowTasks, onResize, supervisorMode, timelineRange]);
+  }, [resizing, elementRef, task.id, rowTasks, onResize, supervisorMode, timelineConfig]);
 
   const startResize = (handle: 'left' | 'right') => (e: ReactMouseEvent) => {
     e.preventDefault();
@@ -62,8 +62,8 @@ const useTaskResize = (
     setResizing({
       handle,
       startX: e.clientX,
-      startDuration: task.durationHours,
-      startStartHour: task.startHour,
+      startDurationSlot: task.durationSlot,
+      startStartSlot: task.startSlot,
     });
   };
 
@@ -86,24 +86,24 @@ const useDraggableTask = (elementRef: RefObject<HTMLDivElement | null>, dragHand
           type: 'task',
           taskId: task.id,
           employeeId: task.employeeId,
-          startHour: task.startHour,
-          durationHours: task.durationHours,
+          startSlot: task.startSlot,
+          durationSlot: task.durationSlot,
           dragOffsetX: input.clientX - element.getBoundingClientRect().left,
         }) satisfies DragData,
       onDragStart: () => setIsDragging(true),
       onDrop: () => setIsDragging(false),
     });
-  }, [task.id, task.employeeId, task.startHour, task.durationHours, elementRef, dragHandleRef, supervisorMode]);
+  }, [task.id, task.employeeId, task.startSlot, task.durationSlot, elementRef, dragHandleRef, supervisorMode]);
 
   return isDragging;
 };
 
-export default function TaskCard({ task, rowTasks, onResize, onEditTask, onDeleteTask, supervisorMode, timelineRange }: TaskCardProps) {
+export default function TaskCard({ task, rowTasks, onResize, onEditTask, onDeleteTask, supervisorMode, timelineConfig }: TaskCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const dragHandleRef = useRef<HTMLDivElement>(null);
   const { theme } = useTheme();
 
-  const { startResize } = useTaskResize(task, onResize, cardRef, rowTasks, supervisorMode, timelineRange);
+  const { startResize } = useTaskResize(task, onResize, cardRef, rowTasks, supervisorMode, timelineConfig);
   const isDragging = useDraggableTask(cardRef, dragHandleRef, task, supervisorMode);
 
   const priorityKey = priorityToColorKey(task.priority);
@@ -123,8 +123,8 @@ export default function TaskCard({ task, rowTasks, onResize, onEditTask, onDelet
       ref={cardRef}
       className={cn('task', isDragging && 'task--dragging')}
       style={{
-        left: `${toTimelinePercent(task.startHour, timelineRange)}%`,
-        width: `${toTimelinePercent(timelineRange.startHour + task.durationHours, timelineRange)}%`,
+        left: `${toTimelinePercent(task.startSlot, timelineConfig)}%`,
+        width: `${(task.durationSlot / (timelineConfig.endSlot - timelineConfig.startSlot)) * 100}%`,
         backgroundColor: bgColor,
         boxShadow: `inset 0 0 0 1000px ${bgColor}`,
       }}
@@ -142,7 +142,7 @@ export default function TaskCard({ task, rowTasks, onResize, onEditTask, onDelet
         <div className="task__title">{task.title}</div>
         <div className="task__description">{task.description || '\u00A0'}</div>
         <div className="task__footer">
-          <span>{formatHour(task.startHour)}–{formatHour(task.startHour + task.durationHours)}</span>
+          <span>{formatSlotRange(task.startSlot, task.durationSlot, timelineConfig.unit)}</span>
           <span className="task__id">#{task.id}</span>
         </div>
       </div>

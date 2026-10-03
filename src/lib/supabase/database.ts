@@ -85,12 +85,12 @@ export async function deleteTask(id: string): Promise<void> {
   if (error) throw error;
 }
 
-export async function moveTask(id: string, employeeId: string, startHour: number): Promise<Task> {
-  return updateTask(id, { employee_id: employeeId, start_hour: startHour });
+export async function moveTask(id: string, employeeId: string, startSlot: number): Promise<Task> {
+  return updateTask(id, { employee_id: employeeId, start_slot: startSlot });
 }
 
-export async function resizeTask(id: string, durationHours: number, startHour: number): Promise<Task> {
-  return updateTask(id, { duration_hours: durationHours, start_hour: startHour });
+export async function resizeTask(id: string, durationSlot: number, startSlot: number): Promise<Task> {
+  return updateTask(id, { duration_slot: durationSlot, start_slot: startSlot });
 }
 
 export async function reorderEmployees(employeeIds: string[]): Promise<void> {

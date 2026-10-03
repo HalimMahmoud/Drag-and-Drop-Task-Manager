@@ -19,8 +19,8 @@ export interface BoardState {
 export type BoardAction =
   | { type: 'add-task'; payload: { employeeId: string; task: Omit<Task, 'id' | 'employeeId'> } }
   | { type: 'add-employee'; payload: Employee }
-  | { type: 'place-task'; payload: { taskId: string; destinationEmployeeId: string; newStartHour: number; range: TimelineRange } }
-  | { type: 'resize-task'; payload: { taskId: string; durationHours: number; startHour: number; range: TimelineRange } }
+  | { type: 'place-task'; payload: { taskId: string; destinationEmployeeId: string; newStartSlot: number; range: TimelineRange } }
+  | { type: 'resize-task'; payload: { taskId: string; durationSlot: number; startSlot: number; range: TimelineRange } }
   | { type: 'update-task'; payload: { taskId: string; updates: Partial<Omit<Task, 'id'>> } }
   | { type: 'delete-task'; payload: { taskId: string } }
   | { type: 'reorder-employees'; payload: { sourceId: string; destinationId: string; edge: Edge | null } }
@@ -43,28 +43,28 @@ const addEmployee = (state: BoardSnapshot, payload: Employee): BoardSnapshot => 
   employees: [...state.employees, payload],
 });
 
-const placeTask = (state: BoardSnapshot, payload: { taskId: string; destinationEmployeeId: string; newStartHour: number; range: TimelineRange }): BoardSnapshot => {
+const placeTask = (state: BoardSnapshot, payload: { taskId: string; destinationEmployeeId: string; newStartSlot: number; range: TimelineRange }): BoardSnapshot => {
   const moved = state.tasks.find((t) => t.id === payload.taskId);
   if (!moved) return state;
   const otherTasks = state.tasks.filter((t) => t.employeeId === payload.destinationEmployeeId && t.id !== payload.taskId);
-  if (!isPositionValid(payload.newStartHour, moved.durationHours, otherTasks, payload.range)) return state;
+  if (!isPositionValid(payload.newStartSlot, moved.durationSlot, otherTasks, payload.range)) return state;
   return {
     ...state,
     tasks: state.tasks.map((t) =>
-      t.id === payload.taskId ? { ...t, employeeId: payload.destinationEmployeeId, startHour: payload.newStartHour } : t,
+      t.id === payload.taskId ? { ...t, employeeId: payload.destinationEmployeeId, startSlot: payload.newStartSlot } : t,
     ),
   };
 };
 
-const resizeTask = (state: BoardSnapshot, payload: { taskId: string; durationHours: number; startHour: number; range: TimelineRange }): BoardSnapshot => {
+const resizeTask = (state: BoardSnapshot, payload: { taskId: string; durationSlot: number; startSlot: number; range: TimelineRange }): BoardSnapshot => {
   const resized = state.tasks.find((t) => t.id === payload.taskId);
   if (!resized) return state;
   const otherTasks = state.tasks.filter((t) => t.employeeId === resized.employeeId && t.id !== payload.taskId);
-  if (!isPositionValid(payload.startHour, payload.durationHours, otherTasks, payload.range)) return state;
+  if (!isPositionValid(payload.startSlot, payload.durationSlot, otherTasks, payload.range)) return state;
   return {
     ...state,
     tasks: state.tasks.map((t) =>
-      t.id === payload.taskId ? { ...t, durationHours: payload.durationHours, startHour: payload.startHour } : t,
+      t.id === payload.taskId ? { ...t, durationSlot: payload.durationSlot, startSlot: payload.startSlot } : t,
     ),
   };
 };

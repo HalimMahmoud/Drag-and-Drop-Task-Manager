@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import App from '@/App';
 import { getDashboard, type DashboardData } from '@/lib/supabase/dashboards';
-import { EMPLOYEES, INITIAL_TASKS } from '@/utils/seed';
 import { EditDashboardDialog } from '@/components/dashboard/EditDashboardDialog';
 import { Button } from '@/components/ui/button';
 import { LayoutGrid, ArrowLeft, Loader2 } from 'lucide-react';
@@ -20,6 +19,9 @@ export default function DashboardPage({
   const [loading, setLoading] = useState(true);
   const [supervisorMode, setSupervisorMode] = useState(false);
   const router = useRouter();
+  // Bumping this remounts <App>, which is how a re-fetched plan (and the tasks the
+  // server re-anchored onto the new grid) replace the in-memory board.
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let mounted = true;
@@ -40,13 +42,13 @@ export default function DashboardPage({
     return () => {
       mounted = false;
     };
-  }, [dashboardId]);
+  }, [dashboardId, reloadKey]);
 
   if (loading) {
     return (
       <main className="app flex h-screen w-screen flex-col items-center justify-center bg-background text-muted-foreground gap-3">
         <Loader2 className="size-6 animate-spin text-primary" />
-        <span className="text-sm font-medium">Loading board /{dashboardId}...</span>
+        <p className="m-0 text-sm font-medium">Loading schedule for /{dashboardId}&hellip;</p>
       </main>
     );
   }
@@ -60,11 +62,11 @@ export default function DashboardPage({
             <LayoutGrid className="size-6" />
           </div>
           <div>
-            <h2 className="text-xl font-bold tracking-tight text-foreground">
-              Board Not Found
-            </h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              The board <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs font-semibold text-foreground">/{dashboardId}</code> doesn&apos;t exist yet or is private.
+            <h1 className="m-0 text-xl font-bold tracking-tight text-foreground">
+              This board isn&apos;t available
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              No schedule exists at <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs font-semibold text-foreground">/{dashboardId}</code>. It may have been deleted, renamed, or set to private.
             </p>
           </div>
           <div className="flex items-center justify-center gap-3 pt-3">
@@ -83,12 +85,12 @@ export default function DashboardPage({
   // Dashboard found! Automatically load and render board
   return (
     <App
-      key={dashboardId}
+      key={`${dashboardId}:${reloadKey}`}
       dashboardId={dashboardId}
       boardTitle={data.title || `Board: ${dashboardId}`}
-      initialEmployees={data.employees?.length ? data.employees : EMPLOYEES}
-      initialTasks={data.tasks?.length ? data.tasks : INITIAL_TASKS}
-      initialTimelineRange={data.config || { startHour: 0, endHour: 12 }}
+      initialEmployees={data.employees ?? []}
+      initialTasks={data.tasks ?? []}
+      initialTimelineConfig={data.config}
       supervisorMode={supervisorMode}
       onSupervisorModeChange={setSupervisorMode}
       showBackButton={true}
@@ -97,7 +99,13 @@ export default function DashboardPage({
         <EditDashboardDialog
           dashboardId={dashboardId}
           currentTitle={data.title || ''}
-          onSaved={(newId, newTitle) => {
+          currentUnit={data.config?.unit}
+          onSaved={(newId, newTitle, unitChanged) => {
+            if (unitChanged) {
+              // Re-anchor server-side, then pull the new plan and task set back in.
+              setReloadKey((key) => key + 1);
+              return;
+            }
             if (newId !== dashboardId) {
               router.push(`/${newId}`);
             } else {

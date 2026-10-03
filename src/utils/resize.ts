@@ -1,42 +1,55 @@
 import type { Task, TimelineRange } from '../types';
-import { MIN_TASK_HOURS, isPositionValid } from './taskLayout';
+import { MIN_TASK_SLOTS, isPositionValid } from './taskLayout';
 
 export interface ResizeHandleState {
   handle: 'left' | 'right';
   startX: number;
-  startDuration: number;
-  startStartHour: number;
+  startDurationSlot: number;
+  startStartSlot: number;
 }
 
 export interface ResizeTarget {
-  newStartHour: number;
-  newDuration: number;
+  newStartSlot: number;
+  newDurationSlot: number;
 }
 
-const resizeRightHandle = (state: ResizeHandleState, deltaHours: number, otherTasks: Task[], timelineRange: TimelineRange): ResizeTarget | null => {
-  const newDuration = Math.max(
-    MIN_TASK_HOURS,
-    Math.min(state.startDuration + deltaHours, timelineRange.endHour - state.startStartHour),
+const resizeRightHandle = (
+  state: ResizeHandleState,
+  deltaSlots: number,
+  otherTasks: Task[],
+  range: TimelineRange,
+): ResizeTarget | null => {
+  const newDurationSlot = Math.max(
+    MIN_TASK_SLOTS,
+    Math.min(state.startDurationSlot + deltaSlots, range.endSlot - state.startStartSlot),
   );
-  if (!isPositionValid(state.startStartHour, newDuration, otherTasks, timelineRange)) return null;
-  return { newStartHour: state.startStartHour, newDuration };
+  if (!isPositionValid(state.startStartSlot, newDurationSlot, otherTasks, range)) return null;
+  return { newStartSlot: state.startStartSlot, newDurationSlot };
 };
 
-const resizeLeftHandle = (state: ResizeHandleState, deltaHours: number, otherTasks: Task[], timelineRange: TimelineRange): ResizeTarget | null => {
-  const rightEdge = state.startStartHour + state.startDuration;
-  const newStartHour = Math.max(timelineRange.startHour, Math.min(state.startStartHour + deltaHours, rightEdge - MIN_TASK_HOURS));
-  const newDuration = rightEdge - newStartHour;
-  if (!isPositionValid(newStartHour, newDuration, otherTasks, timelineRange)) return null;
-  return { newStartHour, newDuration };
+const resizeLeftHandle = (
+  state: ResizeHandleState,
+  deltaSlots: number,
+  otherTasks: Task[],
+  range: TimelineRange,
+): ResizeTarget | null => {
+  const rightEdge = state.startStartSlot + state.startDurationSlot;
+  const newStartSlot = Math.max(
+    range.startSlot,
+    Math.min(state.startStartSlot + deltaSlots, rightEdge - MIN_TASK_SLOTS),
+  );
+  const newDurationSlot = rightEdge - newStartSlot;
+  if (!isPositionValid(newStartSlot, newDurationSlot, otherTasks, range)) return null;
+  return { newStartSlot, newDurationSlot };
 };
 
 export function computeResizeTarget(
   state: ResizeHandleState,
-  deltaHours: number,
+  deltaSlots: number,
   otherTasks: Task[],
-  timelineRange: TimelineRange,
+  range: TimelineRange,
 ): ResizeTarget | null {
   return state.handle === 'right'
-    ? resizeRightHandle(state, deltaHours, otherTasks, timelineRange)
-    : resizeLeftHandle(state, deltaHours, otherTasks, timelineRange);
+    ? resizeRightHandle(state, deltaSlots, otherTasks, range)
+    : resizeLeftHandle(state, deltaSlots, otherTasks, range);
 }

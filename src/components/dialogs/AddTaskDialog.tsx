@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import type { Employee, Task, TimelineRange, ColorPaletteName } from '../../types';
+import type { Employee, Task, TimelineConfig, ColorPaletteName } from '../../types';
 import { useAddTaskForm } from '../../hooks/form/useAddTaskForm';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { DialogFooterButtons } from './DialogFooterButtons';
@@ -11,14 +11,14 @@ interface AddTaskDialogProps {
   employee: Employee;
   tasks: Task[];
   usedColors: ColorPaletteName[];
-  timelineRange: TimelineRange;
+  timelineConfig: TimelineConfig;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (task: Omit<Task, 'id' | 'employeeId'>) => boolean;
 }
 
-export function AddTaskDialog({ trigger, employee, tasks, usedColors, timelineRange, open, onOpenChange, onSave }: AddTaskDialogProps) {
-  const form = useAddTaskForm({ tasks, usedColors, timelineRange, onSave });
+export function AddTaskDialog({ trigger, employee, tasks, usedColors, timelineConfig, open, onOpenChange, onSave }: AddTaskDialogProps) {
+  const form = useAddTaskForm({ tasks, usedColors, timelineRange: timelineConfig, onSave });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -31,7 +31,7 @@ export function AddTaskDialog({ trigger, employee, tasks, usedColors, timelineRa
 
         <div className="grid gap-4 py-4">
           <TaskCommonFields form={form.form} setForm={form.setForm} autoFocus />
-          <TaskScheduleFields form={form.form} setForm={form.setForm} timelineRange={timelineRange} />
+          <TaskScheduleFields form={form.form} setForm={form.setForm} timelineRange={timelineConfig} unit={timelineConfig.unit} />
         </div>
 
         <DialogFooterButtons

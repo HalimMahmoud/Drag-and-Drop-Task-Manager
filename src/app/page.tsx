@@ -7,6 +7,8 @@ import { EditDashboardDialog } from '@/components/dashboard/EditDashboardDialog'
 import { CreateDashboardModal } from '@/components/dashboard/CreateDashboardModal';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/components/AuthProvider';
+import { formatBoardsHeadline } from '@/utils/headlines';
 import {
   Search,
   Users,
@@ -22,6 +24,8 @@ import {
 } from 'lucide-react';
 
 export default function HomePage() {
+  const { user } = useAuth();
+  const canManage = Boolean(user);
   const [dashboards, setDashboards] = useState<DashboardSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -79,8 +83,8 @@ export default function HomePage() {
     <main className="app flex flex-col min-h-screen bg-background text-foreground">
       <AppHeader
         title="All Boards"
-        subtitle="Task timelines"
-        showCreateButton={true}
+        subtitle={formatBoardsHeadline(dashboards.length, searchQuery)}
+        showCreateButton={canManage}
         rightExtra={
           <div className="flex items-center gap-2">
             <div className="relative w-full sm:w-64">
@@ -153,27 +157,29 @@ export default function HomePage() {
                     </div>
 
                     <div className="flex items-center gap-1">
-                      <EditDashboardDialog
-                        dashboardId={board.id}
-                        currentTitle={board.title}
-                        onSaved={(newId, newTitle) => {
-                          setDashboards((prev) =>
-                            prev.map((d) =>
-                              d.id === board.id
-                                ? { ...d, id: newId, title: newTitle }
-                                : d
-                            )
-                          );
-                        }}
-                        trigger={
-                          <button
-                            title="Edit board"
-                            className="p-1.5 text-muted-foreground hover:text-foreground rounded hover:bg-muted transition-colors"
-                          >
-                            <Pencil className="size-3.5" />
-                          </button>
-                        }
-                      />
+                      {canManage && (
+                        <EditDashboardDialog
+                          dashboardId={board.id}
+                          currentTitle={board.title}
+                          onSaved={(newId, newTitle) => {
+                            setDashboards((prev) =>
+                              prev.map((d) =>
+                                d.id === board.id
+                                  ? { ...d, id: newId, title: newTitle }
+                                  : d
+                              )
+                            );
+                          }}
+                          trigger={
+                            <button
+                              title="Edit board"
+                              className="p-1.5 text-muted-foreground hover:text-foreground rounded hover:bg-muted transition-colors"
+                            >
+                              <Pencil className="size-3.5" />
+                            </button>
+                          }
+                        />
+                      )}
                       <button
                         onClick={(e) => handleCopyLink(board.id, e)}
                         title="Copy board URL"
@@ -185,16 +191,18 @@ export default function HomePage() {
                           <Copy className="size-3.5" />
                         )}
                       </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDeletingId(board.id);
-                        }}
-                        title="Delete board"
-                        className="p-1.5 text-muted-foreground hover:text-destructive rounded hover:bg-destructive/10 transition-colors"
-                      >
-                        <Trash2 className="size-3.5" />
-                      </button>
+                      {canManage && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeletingId(board.id);
+                          }}
+                          title="Delete board"
+                          className="p-1.5 text-muted-foreground hover:text-destructive rounded hover:bg-destructive/10 transition-colors"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </button>
+                      )}
                     </div>
                   </div>
 
@@ -257,11 +265,19 @@ export default function HomePage() {
             <div>
               <h3 className="font-semibold text-base text-foreground">No boards yet</h3>
               <p className="text-xs text-muted-foreground mt-1">
-                Create your first team task board to organize tasks across horizontal timelines.
+                {canManage
+                  ? 'Create your first team task board to organize tasks across horizontal timelines.'
+                  : 'Sign in to create a team task board and schedule work across a horizontal timeline.'}
               </p>
             </div>
             <div className="pt-2 flex justify-center">
-              <CreateDashboardModal />
+              {canManage ? (
+                <CreateDashboardModal />
+              ) : (
+                <Button size="sm" asChild>
+                  <Link href="/login">Sign in to create a board</Link>
+                </Button>
+              )}
             </div>
           </div>
         )}

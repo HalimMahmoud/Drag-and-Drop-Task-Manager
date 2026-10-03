@@ -41,8 +41,14 @@ export interface Database {
           title: string;
           description: string | null;
           priority: 'Low' | 'Medium' | 'High';
+          /** Absolute-hour mirror, maintained by the sync_task_hour_mirror trigger. */
           duration_hours: number;
+          /** Absolute-hour mirror, maintained by the sync_task_hour_mirror trigger. */
           start_hour: number;
+          /** Canonical unit-local start, interpreted via the board's config->>'unit'. */
+          start_slot: number | null;
+          /** Canonical unit-local duration, interpreted via the board's config->>'unit'. */
+          duration_slot: number | null;
           color: string | null;
           created_at: string;
           updated_at: string;
@@ -53,9 +59,11 @@ export interface Database {
           employee_id: string;
           title: string;
           description?: string | null;
-          priority: 'Low' | 'Medium' | 'High';
-          duration_hours: number;
-          start_hour: number;
+          priority?: 'Low' | 'Medium' | 'High';
+          duration_hours?: number;
+          start_hour?: number;
+          start_slot?: number | null;
+          duration_slot?: number | null;
           color?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -69,6 +77,8 @@ export interface Database {
           priority?: 'Low' | 'Medium' | 'High';
           duration_hours?: number;
           start_hour?: number;
+          start_slot?: number | null;
+          duration_slot?: number | null;
           color?: string | null;
           created_at?: string;
           updated_at?: string;

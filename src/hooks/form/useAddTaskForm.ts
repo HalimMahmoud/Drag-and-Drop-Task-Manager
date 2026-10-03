@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Priority, Task, TimelineRange, ColorPaletteName } from '../../types';
-import { MIN_TASK_HOURS, isPositionValid } from '../../utils/taskLayout';
+import { MIN_TASK_SLOTS, isPositionValid } from '../../utils/taskLayout';
 import { getNextAvailableColorName } from '../../utils/colorPalette';
 import { useFieldUpdater } from './useFieldUpdater';
 
@@ -9,8 +9,8 @@ interface TaskFormState {
   description: string;
   priority: Priority;
   color: ColorPaletteName;
-  startHour: string;
-  durationHours: string;
+  startSlot: string;
+  durationSlot: string;
 }
 
 export function useAddTaskForm({
@@ -29,13 +29,13 @@ export function useAddTaskForm({
     description: '',
     priority: 'Medium',
     color: getNextAvailableColorName(usedColors),
-    startHour: String(timelineRange.startHour),
-    durationHours: String(MIN_TASK_HOURS),
+    startSlot: String(timelineRange.startSlot),
+    durationSlot: String(MIN_TASK_SLOTS),
   });
   const updateField = useFieldUpdater(setForm);
-  const startHour = Number(form.startHour);
-  const durationHours = Number(form.durationHours);
-  const isValid = form.title.trim().length > 0 && isPositionValid(startHour, durationHours, tasks, timelineRange);
+  const startSlot = Number(form.startSlot);
+  const durationSlot = Number(form.durationSlot);
+  const isValid = form.title.trim().length > 0 && isPositionValid(startSlot, durationSlot, tasks, timelineRange);
 
   const handleSave = () =>
     onSave({
@@ -43,8 +43,8 @@ export function useAddTaskForm({
       priority: form.priority,
       color: form.color,
       ...(form.description.trim() ? { description: form.description.trim() } : {}),
-      startHour,
-      durationHours,
+      startSlot,
+      durationSlot,
     });
 
   return { form, setForm, updateField, isValid, handleSave };

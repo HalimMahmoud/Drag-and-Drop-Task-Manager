@@ -13,7 +13,7 @@ export function createBoardActions(
     addTask: (employeeId: string, task: Omit<Task, 'id' | 'employeeId'>): boolean => {
       const { tasks } = getState();
       const otherTasks = tasks.filter((t) => t.employeeId === employeeId);
-      if (!isPositionValid(task.startHour, task.durationHours, otherTasks, getRange())) return false;
+      if (!isPositionValid(task.startSlot, task.durationSlot, otherTasks, getRange())) return false;
       dispatch({ type: 'add-task', payload: { employeeId, task } });
       return true;
     },
@@ -24,14 +24,14 @@ export function createBoardActions(
       return created;
     },
 
-    placeTask: (taskId: string, destinationEmployeeId: string, newStartHour: number) =>
-      dispatch({ type: 'place-task', payload: { taskId, destinationEmployeeId, newStartHour, range: getRange() } }),
+    placeTask: (taskId: string, destinationEmployeeId: string, newStartSlot: number) =>
+      dispatch({ type: 'place-task', payload: { taskId, destinationEmployeeId, newStartSlot, range: getRange() } }),
 
     reorderEmployees: (sourceId: string, destinationId: string, edge: Edge | null) =>
       dispatch({ type: 'reorder-employees', payload: { sourceId, destinationId, edge } }),
 
-    resizeTask: (taskId: string, durationHours: number, startHour: number) =>
-      dispatch({ type: 'resize-task', payload: { taskId, durationHours, startHour, range: getRange() } }),
+    resizeTask: (taskId: string, durationSlot: number, startSlot: number) =>
+      dispatch({ type: 'resize-task', payload: { taskId, durationSlot, startSlot, range: getRange() } }),
 
     updateTask: (taskId: string, updates: Partial<Omit<Task, 'id'>>) =>
       dispatch({ type: 'update-task', payload: { taskId, updates } }),

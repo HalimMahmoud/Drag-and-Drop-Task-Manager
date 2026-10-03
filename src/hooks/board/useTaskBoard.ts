@@ -1,6 +1,6 @@
 import { useEffect, useReducer, useRef, useState, type RefObject } from 'react';
 import type { Edge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/types';
-import { DEFAULT_TIMELINE_RANGE, type Employee, type Task, type TimelineRange } from '../../types';
+import { DEFAULT_TIMELINE_CONFIG, type Employee, type Task, type TimelineConfig, type TimelineRange } from '../../types';
 import { isValidTimelineRange } from '../../utils/timelineRange';
 import { isTaskVisibleInRange } from '../../utils/taskLayout';
 import { boardReducer, type BoardState } from '../../state/boardReducer';
@@ -12,20 +12,21 @@ import { useLatest } from './useLatest';
 export interface UseTaskBoardReturn {
   employees: Employee[];
   tasks: Task[];
-  hourWidth: number;
+  slotWidth: number;
+  timelineConfig: TimelineConfig;
   timelineRange: TimelineRange;
   hiddenTaskCount: number;
   boardRef: RefObject<HTMLDivElement | null>;
-  setTimelineRange: (range: TimelineRange) => void;
+  setTimelineConfig: (config: TimelineConfig) => void;
   canUndo: boolean;
   canRedo: boolean;
   undo: () => void;
   redo: () => void;
   addTask: (employeeId: string, task: Omit<Task, 'id' | 'employeeId'>) => boolean;
   addEmployee: (employee: Omit<Employee, 'id'>) => Employee;
-  placeTask: (taskId: string, destinationEmployeeId: string, newStartHour: number) => void;
+  placeTask: (taskId: string, destinationEmployeeId: string, newStartSlot: number) => void;
   reorderEmployees: (sourceId: string, destinationId: string, edge: Edge | null) => void;
-  resizeTask: (taskId: string, durationHours: number, startHour: number) => void;
+  resizeTask: (taskId: string, durationSlot: number, startSlot: number) => void;
   tasksForEmployee: (employeeId: string) => Task[];
   updateTask: (taskId: string, updates: Partial<Omit<Task, 'id'>>) => void;
   deleteTask: (taskId: string) => void;
@@ -36,7 +37,7 @@ export interface UseTaskBoardReturn {
 export function useTaskBoard(
   initialEmployees: Employee[],
   initialTasks: Task[],
-  initialTimelineRange: TimelineRange = DEFAULT_TIMELINE_RANGE
+  initialTimelineConfig: TimelineConfig = DEFAULT_TIMELINE_CONFIG
 ): UseTaskBoardReturn {
   const [state, dispatch] = useReducer(boardReducer, {
     employees: initialEmployees,
@@ -44,9 +45,10 @@ export function useTaskBoard(
     past: [],
     future: [],
   } satisfies BoardState);
-  const [timelineRange, setTimelineRangeState] = useState(initialTimelineRange);
+  const [timelineConfig, setTimelineConfigState] = useState(initialTimelineConfig);
   const boardRef = useRef<HTMLDivElement>(null);
-  const hourWidth = useTimelineWidth(boardRef, timelineRange.endHour - timelineRange.startHour);
+  const timelineRange: TimelineRange = timelineConfig;
+  const slotWidth = useTimelineWidth(boardRef, timelineConfig.endSlot - timelineConfig.startSlot);
 
   const stateRef = useLatest(state);
   const rangeRef = useLatest(timelineRange);
@@ -88,18 +90,19 @@ export function useTaskBoard(
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [actions]);
 
-  return {
+return {
     ...state,
-    hourWidth,
+    slotWidth,
+    timelineConfig,
     timelineRange,
     hiddenTaskCount: state.tasks.filter((task) => !isTaskVisibleInRange(task, timelineRange)).length,
     boardRef,
     canUndo: state.past.length > 0,
     canRedo: state.future.length > 0,
-    setTimelineRange: (range) => {
-      if (isValidTimelineRange(range)) setTimelineRangeState(range);
+    setTimelineConfig: (config) => {
+      if (isValidTimelineRange(config, config.unit)) setTimelineConfigState(config);
     },
-    tasksForEmployee: (employeeId) =>
+    tasksForEmployee: (employeeId: string) =>
       state.tasks.filter((task) => task.employeeId === employeeId && isTaskVisibleInRange(task, timelineRange)),
     ...actions,
   };

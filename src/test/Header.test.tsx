@@ -21,10 +21,20 @@ const renderHeader = (props: Partial<Parameters<typeof AppHeader>[0]> = {}) =>
   );
 
 describe('AppHeader', () => {
-  it('renders the title and subtitle', () => {
+  it('renders the title as a level-one heading', () => {
     renderHeader({ title: 'My Board', subtitle: '/my-board' });
-    expect(screen.getByText('My Board')).toBeTruthy();
+    const heading = screen.getByRole('heading', { level: 1, name: 'My Board' });
+    expect(heading).toBeTruthy();
+  });
+
+  it('renders the subtitle as supporting text', () => {
+    renderHeader({ title: 'My Board', subtitle: '/my-board' });
     expect(screen.getByText('/my-board')).toBeTruthy();
+  });
+
+  it('omits the subtitle when none is provided', () => {
+    renderHeader({ title: 'My Board', subtitle: undefined });
+    expect(screen.getByRole('heading', { level: 1, name: 'My Board' })).toBeTruthy();
   });
 
   it('shows the supervisor toggle when onSupervisorModeChange is provided', () => {
@@ -55,5 +65,26 @@ describe('AppHeader', () => {
   it('hides Add Employee button when supervisor mode is off', () => {
     renderHeader({ supervisorMode: false });
     expect(screen.queryByRole('button', { name: 'Add Employee' })).toBeNull();
+  });
+
+  it('hides the back link by default', () => {
+    renderHeader();
+    expect(screen.queryByRole('link', { name: 'All Boards' })).toBeNull();
+  });
+
+  it('shows a labeled back link when showBackButton is true', () => {
+    renderHeader({ showBackButton: true, backHref: '/' });
+    const link = screen.getByRole('link', { name: 'All Boards' });
+    expect(link.getAttribute('href')).toBe('/');
+  });
+
+  it('accepts a custom back label and href', () => {
+    renderHeader({
+      showBackButton: true,
+      backHref: '/team',
+      backLabel: 'Team boards',
+    });
+    const link = screen.getByRole('link', { name: 'Team boards' });
+    expect(link.getAttribute('href')).toBe('/team');
   });
 });

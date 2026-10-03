@@ -25,18 +25,18 @@ export const EMPLOYEES: Employee[] = [
 ];
 
 export const INITIAL_TASKS: Task[] = [
-  { id: taskIdGenerator(), employeeId: 'ahmed', title: 'Login page', priority: 'High', durationHours: 2, startHour: 0, color: getTaskColor() },
-  { id: taskIdGenerator(), employeeId: 'ahmed', title: 'Dashboard', priority: 'Medium', durationHours: 2, startHour: 3, color: getTaskColor() },
-  { id: taskIdGenerator(), employeeId: 'ahmed', title: 'API integration', priority: 'High', durationHours: 3, startHour: 6, color: getTaskColor() },
-  { id: taskIdGenerator(), employeeId: 'ahmed', title: 'Responsive fixes', priority: 'Low', durationHours: 2, startHour: 10, color: getTaskColor() },
-  { id: taskIdGenerator(), employeeId: 'mohamed', title: 'Auth API', priority: 'High', durationHours: 2, startHour: 0, color: getTaskColor() },
-  { id: taskIdGenerator(), employeeId: 'mohamed', title: 'Orders service', priority: 'Medium', durationHours: 3, startHour: 4, color: getTaskColor() },
-  { id: taskIdGenerator(), employeeId: 'mohamed', title: 'Database migration', priority: 'Low', durationHours: 2, startHour: 9, color: getTaskColor() },
-  { id: taskIdGenerator(), employeeId: 'omar', title: 'Wireframes', priority: 'Medium', durationHours: 2, startHour: 0, color: getTaskColor() },
-  { id: taskIdGenerator(), employeeId: 'omar', title: 'Design system', priority: 'High', durationHours: 3, startHour: 4, color: getTaskColor() },
-  { id: taskIdGenerator(), employeeId: 'omar', title: 'Mobile screens', priority: 'Low', durationHours: 2, startHour: 8, color: getTaskColor() },
-  { id: taskIdGenerator(), employeeId: 'ali', title: 'Regression tests', priority: 'High', durationHours: 2, startHour: 0, color: getTaskColor() },
-  { id: taskIdGenerator(), employeeId: 'ali', title: 'E2E tests', priority: 'Medium', durationHours: 2, startHour: 4, color: getTaskColor() },
+  { id: taskIdGenerator(), employeeId: 'ahmed', title: 'Login page', priority: 'High', durationSlot: 2, startSlot: 0, color: getTaskColor() },
+  { id: taskIdGenerator(), employeeId: 'ahmed', title: 'Dashboard', priority: 'Medium', durationSlot: 2, startSlot: 3, color: getTaskColor() },
+  { id: taskIdGenerator(), employeeId: 'ahmed', title: 'API integration', priority: 'High', durationSlot: 3, startSlot: 6, color: getTaskColor() },
+  { id: taskIdGenerator(), employeeId: 'ahmed', title: 'Responsive fixes', priority: 'Low', durationSlot: 2, startSlot: 10, color: getTaskColor() },
+  { id: taskIdGenerator(), employeeId: 'mohamed', title: 'Auth API', priority: 'High', durationSlot: 2, startSlot: 0, color: getTaskColor() },
+  { id: taskIdGenerator(), employeeId: 'mohamed', title: 'Orders service', priority: 'Medium', durationSlot: 3, startSlot: 4, color: getTaskColor() },
+  { id: taskIdGenerator(), employeeId: 'mohamed', title: 'Database migration', priority: 'Low', durationSlot: 2, startSlot: 9, color: getTaskColor() },
+  { id: taskIdGenerator(), employeeId: 'omar', title: 'Wireframes', priority: 'Medium', durationSlot: 2, startSlot: 0, color: getTaskColor() },
+  { id: taskIdGenerator(), employeeId: 'omar', title: 'Design system', priority: 'High', durationSlot: 3, startSlot: 4, color: getTaskColor() },
+  { id: taskIdGenerator(), employeeId: 'omar', title: 'Mobile screens', priority: 'Low', durationSlot: 2, startSlot: 8, color: getTaskColor() },
+  { id: taskIdGenerator(), employeeId: 'ali', title: 'Regression tests', priority: 'High', durationSlot: 2, startSlot: 0, color: getTaskColor() },
+  { id: taskIdGenerator(), employeeId: 'ali', title: 'E2E tests', priority: 'Medium', durationSlot: 2, startSlot: 4, color: getTaskColor() },
 ];
 
 export { COLOR_PALETTE, getColorVariant, getNextAvailableColor };

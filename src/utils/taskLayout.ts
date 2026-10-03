@@ -1,7 +1,7 @@
 import { customAlphabet } from 'nanoid';
 import type { Priority, PriorityColorKey, PriorityColors, Task, TimelineRange } from '../types';
 
-export const MIN_TASK_HOURS = 1;
+export const MIN_TASK_SLOTS = 1;
 export const taskIdGenerator = customAlphabet('0123456789abcdefghijklmnopqrstuvwxyz', 3);
 
 const TASK_COLOR_PALETTE = [
@@ -27,49 +27,49 @@ export const nextTaskColor = (usedColors: readonly string[]): string => {
 };
 
 export const isTaskVisibleInRange = (task: Task, range: TimelineRange) =>
-  task.startHour >= range.startHour && task.startHour + task.durationHours <= range.endHour;
+  task.startSlot >= range.startSlot && task.startSlot + task.durationSlot <= range.endSlot;
 
-export const isPositionValid = (startHour: number, durationHours: number, otherTasks: Task[], range: TimelineRange): boolean =>
-  Number.isInteger(startHour) &&
-  Number.isInteger(durationHours) &&
-  startHour >= range.startHour &&
-  startHour + durationHours <= range.endHour &&
-  !otherTasks.some((task) => startHour < task.startHour + task.durationHours && startHour + durationHours > task.startHour);
+export const isPositionValid = (startSlot: number, durationSlot: number, otherTasks: Task[], range: TimelineRange): boolean =>
+  Number.isInteger(startSlot) &&
+  Number.isInteger(durationSlot) &&
+  startSlot >= range.startSlot &&
+  startSlot + durationSlot <= range.endSlot &&
+  !otherTasks.some((task) => startSlot < task.startSlot + task.durationSlot && startSlot + durationSlot > task.startSlot);
 
-export const findNearestValidStartHour = (
-  targetStartHour: number,
-  durationHours: number,
+export const findNearestValidStartSlot = (
+  targetStartSlot: number,
+  durationSlot: number,
   otherTasks: Task[],
   range: TimelineRange,
 ): number | null => {
-  const timelineHours = range.endHour - range.startHour;
-  if (durationHours > timelineHours) return null;
+  const timelineSlots = range.endSlot - range.startSlot;
+  if (durationSlot > timelineSlots) return null;
 
-  const minimumStartHour = range.startHour;
-  const maximumStartHour = range.endHour - durationHours;
-  const boundedTargetHour = Math.max(minimumStartHour, Math.min(Math.floor(targetStartHour), maximumStartHour));
+  const minimumStartSlot = range.startSlot;
+  const maximumStartSlot = range.endSlot - durationSlot;
+  const boundedTargetSlot = Math.max(minimumStartSlot, Math.min(Math.floor(targetStartSlot), maximumStartSlot));
 
-  for (let delta = 0; delta <= timelineHours; delta++) {
-    const leftStartHour = boundedTargetHour - delta;
-    if (isPositionValid(leftStartHour, durationHours, otherTasks, range)) return leftStartHour;
+  for (let delta = 0; delta <= timelineSlots; delta++) {
+    const leftStartSlot = boundedTargetSlot - delta;
+    if (isPositionValid(leftStartSlot, durationSlot, otherTasks, range)) return leftStartSlot;
 
-    const rightStartHour = boundedTargetHour + delta;
-    if (delta > 0 && isPositionValid(rightStartHour, durationHours, otherTasks, range)) return rightStartHour;
+    const rightStartSlot = boundedTargetSlot + delta;
+    if (delta > 0 && isPositionValid(rightStartSlot, durationSlot, otherTasks, range)) return rightStartSlot;
   }
 
   return null;
 };
 
-export const snapToHour = (
+export const snapToSlot = (
   clientX: number,
   taskAreaRect: DOMRect,
   dragOffsetX: number,
-  durationHours: number,
+  durationSlot: number,
   range: TimelineRange,
 ) => {
-  const hourWidth = taskAreaRect.width / (range.endHour - range.startHour);
-  const rawHour = Math.round((clientX - taskAreaRect.left - dragOffsetX) / hourWidth);
-  return Math.max(range.startHour, Math.min(rawHour, range.endHour - durationHours));
+  const slotWidth = taskAreaRect.width / (range.endSlot - range.startSlot);
+  const rawSlot = Math.round((clientX - taskAreaRect.left - dragOffsetX) / slotWidth);
+  return Math.max(range.startSlot, Math.min(rawSlot, range.endSlot - durationSlot));
 };
 
 export const PRIORITY_COLORS: Record<PriorityColorKey, PriorityColors> = {

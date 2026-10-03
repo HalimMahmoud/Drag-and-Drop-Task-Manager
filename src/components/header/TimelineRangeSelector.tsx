@@ -1,42 +1,70 @@
-import { MAX_TIMELINE_HOURS, type TimelineRange } from '../../types';
+import { useCallback } from 'react';
+import type { TimeUnit, TimelineConfig } from '../../types';
 import { isValidTimelineRange } from '../../utils/timelineRange';
-import { HourSelect } from './HourSelect';
-import { PresetHours } from './PresetHours';
+import { getMaxSlots, getTimeUnitDefinition, formatUnitCount, getSelectableSlots } from '../../utils/timeUnits';
+import { getDefaultTimelineConfig } from '../../utils/timeUnits';
+import { SlotSelect } from './SlotSelect';
+import { TimeUnitTabs } from './TimeUnitTabs';
 import { HiddenTasksNote } from './HiddenTasksNote';
 
 interface TimelineRangeSelectorProps {
-  timelineRange: TimelineRange;
-  onTimelineRangeChange: (range: TimelineRange) => void;
+  timelineConfig: TimelineConfig;
+  onTimelineConfigChange: (config: TimelineConfig) => void;
   hiddenTaskCount: number;
 }
 
-const START_HOURS = Array.from({ length: MAX_TIMELINE_HOURS }, (_, hour) => hour);
-const END_HOURS = Array.from({ length: MAX_TIMELINE_HOURS }, (_, hour) => hour + 1);
+export default function TimelineRangeSelector({
+  timelineConfig,
+  onTimelineConfigChange,
+  hiddenTaskCount,
+}: TimelineRangeSelectorProps) {
+  const { unit, startSlot, endSlot } = timelineConfig;
+  const maxSlots = getMaxSlots(unit);
+  const { singular } = getTimeUnitDefinition(unit);
 
-export default function TimelineRangeSelector({ timelineRange, onTimelineRangeChange, hiddenTaskCount }: TimelineRangeSelectorProps) {
-  const { startHour, endHour } = timelineRange;
-  const updateRange = (next: TimelineRange) => {
-    if (isValidTimelineRange(next)) onTimelineRangeChange(next);
-  };
+  const updateConfig = useCallback(
+    (next: TimelineConfig) => {
+      if (isValidTimelineRange(next, next.unit)) onTimelineConfigChange(next);
+    },
+    [onTimelineConfigChange],
+  );
+
+  const handleUnitChange = useCallback(
+    (nextUnit: TimeUnit) => {
+      // A new granularity gets its own full-width window, since the old bounds rarely
+      // mean anything on a different grid.
+      updateConfig(getDefaultTimelineConfig(nextUnit));
+    },
+    [updateConfig],
+  );
+
+  const allSlots = getSelectableSlots(unit);
 
   return (
     <div className="timeline-range">
-      <span className="timeline-range__label">Hour range</span>
-      <HourSelect
-        label="Timeline start hour"
-        value={startHour}
-        hours={START_HOURS.filter((hour) => hour < endHour)}
-        onChange={(hour) => updateRange({ startHour: hour, endHour: Math.min(Math.max(endHour, hour + 1), MAX_TIMELINE_HOURS) })}
+      <span className="timeline-range__label">Time plan</span>
+      <TimeUnitTabs unit={unit} onSelect={handleUnitChange} />
+
+      <span className="timeline-range__label">{singular} range</span>
+      <SlotSelect
+        label="Timeline start"
+        value={startSlot}
+        slots={allSlots.filter((slot) => slot < endSlot)}
+        unit={unit}
+        onChange={(slot) => updateConfig({ ...timelineConfig, startSlot: slot })}
       />
-      <span>–</span>
-      <HourSelect
-        label="Timeline end hour"
-        value={endHour}
-        hours={END_HOURS.filter((hour) => hour > startHour)}
-        onChange={(hour) => updateRange({ startHour: Math.max(Math.min(startHour, hour - 1), 0), endHour: hour })}
+      <span aria-hidden="true">&ndash;</span>
+      <SlotSelect
+        label="Timeline end"
+        value={endSlot}
+        slots={allSlots.filter((slot) => slot > startSlot)}
+        unit={unit}
+        onChange={(slot) => updateConfig({ ...timelineConfig, endSlot: slot })}
       />
-      <span className="timeline-range__hint">{timelineRange.endHour - timelineRange.startHour}h / {MAX_TIMELINE_HOURS}h max</span>
-      <PresetHours range={timelineRange} onSelect={updateRange} />
+
+      <span className="timeline-range__hint">
+        {formatUnitCount(endSlot - startSlot, unit)} / {formatUnitCount(maxSlots, unit)} max
+      </span>
       <HiddenTasksNote count={hiddenTaskCount} />
     </div>
   );

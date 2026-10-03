@@ -1,4 +1,5 @@
 import type { TimelineRange } from '../types';
 
-export const toTimelinePercent = (hour: number, range: TimelineRange) =>
-  ((hour - range.startHour) / (range.endHour - range.startHour)) * 100;
+/** Maps a slot index to a 0-100 percentage across the visible window. */
+export const toTimelinePercent = (slot: number, range: TimelineRange) =>
+  ((slot - range.startSlot) / (range.endSlot - range.startSlot)) * 100;

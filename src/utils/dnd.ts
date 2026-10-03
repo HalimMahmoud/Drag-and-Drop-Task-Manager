@@ -1,13 +1,8 @@
 import { isTask, type Task, type TimelineRange } from '../types';
-import { findNearestValidStartHour, snapToHour } from './taskLayout';
+import { findNearestValidStartSlot, snapToSlot } from './taskLayout';
 
-export function resolveTaskDropStartHour({
-  input,
-  source,
-  element,
-  employeeId,
-  tasks,
-  timelineRange,
+export function resolveTaskDropStartSlot({
+  input, source, element, employeeId, tasks, timelineRange,
 }: {
   input: { clientX: number };
   source: { data: Record<string, unknown> };
@@ -18,7 +13,7 @@ export function resolveTaskDropStartHour({
 }): number | null {
   const { data } = source;
   if (!isTask(data)) return null;
-  const rawHour = snapToHour(input.clientX, element.getBoundingClientRect(), data.dragOffsetX, data.durationHours, timelineRange);
+  const rawSlot = snapToSlot(input.clientX, element.getBoundingClientRect(), data.dragOffsetX, data.durationSlot, timelineRange);
   const otherTasks = tasks.filter((t) => t.employeeId === employeeId && t.id !== data.taskId);
-  return findNearestValidStartHour(rawHour, data.durationHours, otherTasks, timelineRange);
+  return findNearestValidStartSlot(rawSlot, data.durationSlot, otherTasks, timelineRange);
 }

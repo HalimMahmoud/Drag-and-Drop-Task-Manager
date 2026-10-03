@@ -9,9 +9,12 @@ import { DeleteEmployeeDialogSlot } from './slots/DeleteEmployeeDialogSlot';
 interface DialogsProps {
   board: SlotProps['board'];
   ui: SlotProps['ui'];
+  supervisorMode: boolean;
 }
 
-export function Dialogs({ board, ui }: DialogsProps) {
+export function Dialogs({ board, ui, supervisorMode }: DialogsProps) {
+  if (!supervisorMode) return null;
+
   return (
     <>
       <AddTaskDialogSlot board={board} ui={ui} />

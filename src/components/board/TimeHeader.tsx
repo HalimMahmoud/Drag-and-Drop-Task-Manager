@@ -1,23 +1,26 @@
-import type { TimelineRange } from '../../types';
-import { getTimelineHours } from '../../utils/timelineHours';
+import type { TimelineConfig } from '../../types';
+import { getTimelineSlots } from '../../utils/timelineSlots';
+import { formatAxisSlot } from '../../utils/timeUnits';
 
 interface TimeHeaderProps {
-  timelineRange: TimelineRange;
+  timelineConfig: TimelineConfig;
 }
 
-export default function TimeHeader({ timelineRange }: TimeHeaderProps) {
-  const timelineHours = getTimelineHours(timelineRange);
-  const hours = Array.from({ length: timelineHours }, (_, index) => timelineRange.startHour + index);
+export default function TimeHeader({ timelineConfig }: TimeHeaderProps) {
+  const timelineSlots = getTimelineSlots(timelineConfig);
+  const slots = Array.from({ length: timelineSlots }, (_, index) => timelineConfig.startSlot + index);
 
   return (
     <div className="timeline-header">
       <div className="timeline-header__spacer" />
       <div
         className="timeline-header__track"
-        style={{ gridTemplateColumns: `repeat(${timelineHours}, 1fr)` }}
+        style={{ gridTemplateColumns: `repeat(${timelineSlots}, 1fr)` }}
       >
-        {hours.map((hour) => (
-          <div key={hour} className="timeline-header__label">{`${String(hour).padStart(2, '0')}:00`}</div>
+        {slots.map((slot) => (
+          <div key={slot} className="timeline-header__label">
+            {formatAxisSlot(slot, timelineConfig.unit)}
+          </div>
         ))}
       </div>
     </div>

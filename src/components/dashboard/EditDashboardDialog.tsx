@@ -11,22 +11,29 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { slugify } from '@/utils/slugify';
+import { TIME_UNITS, TIME_UNIT_DEFINITIONS, normalizeTimeUnit } from '@/utils/timeUnits';
+import type { TimeUnit } from '@/types';
 import { Input } from '@/components/ui/input';
 import { Pencil } from 'lucide-react';
 
 interface EditDashboardDialogProps {
   dashboardId: string;
   currentTitle: string;
-  onSaved: (newId: string, newTitle: string) => void;
+  currentUnit?: TimeUnit | string | null;
+  onSaved: (newId: string, newTitle: string, unitChanged: boolean) => void;
   trigger?: React.ReactNode;
 }
 
-export function EditDashboardDialog({ dashboardId, currentTitle, onSaved, trigger }: EditDashboardDialogProps) {
+export function EditDashboardDialog({ dashboardId, currentTitle, currentUnit, onSaved, trigger }: EditDashboardDialogProps) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState(currentTitle);
   const [newId, setNewId] = useState(dashboardId);
+  const [unit, setUnit] = useState<TimeUnit>(() => normalizeTimeUnit(currentUnit));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const initialUnit = normalizeTimeUnit(currentUnit);
+  const unitChanged = unit !== initialUnit;
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newTitle = e.target.value;
@@ -54,13 +61,22 @@ export function EditDashboardDialog({ dashboardId, currentTitle, onSaved, trigge
       const res = await updateDashboard(dashboardId, {
         title: title.trim(),
         newId: newId.trim(),
+        ...(unitChanged ? { unit } : {}),
       });
-      if (!res.success) {
-        setError(res.error || 'Failed to update board.');
+if (!res.success) {
+        setError(res.error || 'Failed to update board');
         return;
       }
       setOpen(false);
-      onSaved(newId.trim(), title.trim());
+
+      if (res.droppedTasks) {
+        alert(
+          `${res.droppedTasks} task${res.droppedTasks === 1 ? '' : 's'} could not fit the ` +
+            `${TIME_UNIT_DEFINITIONS[unit].plural} timeline and ${res.droppedTasks === 1 ? 'was' : 'were'} removed.`
+        );
+      }
+
+      onSaved(newId.trim(), title.trim(), unitChanged);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -80,7 +96,7 @@ export function EditDashboardDialog({ dashboardId, currentTitle, onSaved, trigge
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Edit Board</DialogTitle>
-          <DialogDescription>Update the board title and URL slug.</DialogDescription>
+          <DialogDescription>Update the board title, URL slug and time plan.</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
@@ -121,6 +137,40 @@ export function EditDashboardDialog({ dashboardId, currentTitle, onSaved, trigge
             <p className="text-[11px] text-muted-foreground mt-1">
               Your board will be at: <code>/{newId || 'your-slug'}</code>
             </p>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-foreground mb-1">
+              Time plan
+            </label>
+            <div className="flex flex-wrap gap-1.5">
+              {TIME_UNITS.map((option) => {
+                const definition = TIME_UNIT_DEFINITIONS[option];
+                const isActive = option === unit;
+                return (
+                  <button
+                    key={option}
+                    type="button"
+                    aria-pressed={isActive}
+                    onClick={() => setUnit(option)}
+                    className={`rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                      isActive
+                        ? 'border-primary bg-primary text-primary-foreground'
+                        : 'border-input bg-background text-foreground hover:bg-accent'
+                    }`}
+                  >
+                    {definition.label}
+                  </button>
+                );
+              })}
+            </div>
+            {unitChanged && (
+              <p className="mt-1.5 text-[11px] font-medium text-amber-600 dark:text-amber-400">
+                Switching to {TIME_UNIT_DEFINITIONS[unit].plural} re-anchors existing tasks. Tasks that
+                collide with, or fall outside, the new {TIME_UNIT_DEFINITIONS[unit].maxSlots}-
+                {TIME_UNIT_DEFINITIONS[unit].short} range will be removed.
+              </p>
+            )}
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
