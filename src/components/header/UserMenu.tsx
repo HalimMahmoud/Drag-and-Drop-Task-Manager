@@ -28,7 +28,11 @@ export function UserMenu() {
       <Button
         variant="outline"
         size="sm"
-        onClick={() => router.push('/login')}
+        onClick={() => {
+          const hash = typeof window !== 'undefined' ? window.location.hash : '';
+          const query = hash && hash !== '#/' ? `?redirect=${encodeURIComponent(hash)}` : '';
+          router.push(`/login${query}`);
+        }}
         className="gap-1.5"
       >
         <LogIn className="size-4" />

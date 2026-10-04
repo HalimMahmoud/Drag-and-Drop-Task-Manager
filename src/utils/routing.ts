@@ -28,7 +28,11 @@ function buildUrl(hash: string, origin?: string): string {
   const root = (origin ?? (typeof window === 'undefined' ? '' : window.location.origin))
     .replace(/\/+$/, '');
   const prefix = base ? `${root}/${base}` : root;
-  return hash ? `${prefix}/${hash}` : `${prefix}/`;
+  if (!hash || hash === '/' || hash === '#/') {
+    return `${prefix}/`;
+  }
+  const cleanHash = hash.startsWith('#') ? hash : `#/${hash.replace(/^\/+/, '')}`;
+  return `${prefix}/${cleanHash}`;
 }
 
 /** The route a board lives at, e.g. `#/my-board`. */
@@ -109,7 +113,10 @@ export function safeRedirectTarget(raw: string | null | undefined): string {
 
 /** Applies a destination produced by {@link safeRedirectTarget}. */
 export function goToTarget(target: string): void {
-  window.location.replace(target);
+  const destination = target.startsWith('http://') || target.startsWith('https://')
+    ? target
+    : buildUrl(target);
+  window.location.replace(destination);
 }
 
 /** The OAuth return URL, including the base path Pages serves the app from. */

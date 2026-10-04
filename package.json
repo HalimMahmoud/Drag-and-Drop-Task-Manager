@@ -1,5 +1,6 @@
 {
   "name": "horizontal-pdd-task-board",
+  "homepage": "https://HalimMahmoud.github.io/Drag-and-Drop-Task-Manager",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -10,7 +11,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "predeploy": "cross-env NEXT_PUBLIC_BASE_PATH=/Drag-and-Drop-Task-Manager npm run build",
+    "deploy": "gh-pages -d out --dotfiles --nojekyll"
   },
   "dependencies": {
     "@atlaskit/pragmatic-drag-and-drop": "latest",
@@ -44,6 +47,8 @@
     "@types/react-dom": "latest",
     "@vitejs/plugin-react": "latest",
     "@vitest/coverage-v8": "^5.0.0",
+    "cross-env": "^10.1.0",
+    "gh-pages": "^6.3.0",
     "jsdom": "^30.0.1",
     "typescript": "latest",
     "vite": "latest",
