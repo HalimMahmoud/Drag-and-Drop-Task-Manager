@@ -82,3 +82,6 @@ ehthumbs.db
 *.key
 .fallowrc.json
 test-results/
+
+package-lock.json
+skills-lock.json
