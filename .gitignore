@@ -12,8 +12,12 @@
 .kilo/
 
 
-# Any file with "lock" in its name (package-lock.json, yarn.lock, pnpm-lock.yaml, …)
-*lock*
+# Lockfiles for package managers this project doesn't use.
+# package-lock.json is intentionally COMMITTED: CI uses `npm ci`, which needs it.
+yarn.lock
+pnpm-lock.yaml
+bun.lockb
+bun.lock
 
 # Dependencies
 node_modules/

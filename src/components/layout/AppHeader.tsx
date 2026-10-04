@@ -15,6 +15,7 @@ interface AppHeaderProps {
   subtitle?: string;
   showCreateButton?: boolean;
   showBackButton?: boolean;
+  /** Hash route for the back link, e.g. `#/`. See `src/utils/routing.ts`. */
   backHref?: string;
   backLabel?: string;
   supervisorMode?: boolean;
@@ -36,7 +37,7 @@ export function AppHeader({
   subtitle,
   showCreateButton = true,
   showBackButton = false,
-  backHref = '/',
+  backHref = '#/',
   backLabel = 'All Boards',
   supervisorMode = false,
   onSupervisorModeChange,
@@ -56,11 +57,13 @@ export function AppHeader({
       <div className="header__top w-full px-4 h-14 flex items-center justify-between gap-4">
         <div className="flex items-center gap-2.5 min-w-0">
           {showBackButton && (
+            // A plain anchor, not <Link>: back targets are fragment routes, and a
+            // fragment-only href must change the hash without touching the path.
             <Button asChild variant="outline" size="sm" className="gap-1.5 shrink-0">
-              <Link href={backHref}>
+              <a href={backHref}>
                 <ArrowLeft className="size-4" />
                 {backLabel}
-              </Link>
+              </a>
             </Button>
           )}
           <div className="size-8 shrink-0 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold">

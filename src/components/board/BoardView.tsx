@@ -1,24 +1,24 @@
 'use client';
 
-import { use, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import App from '@/App';
 import { getDashboard, type DashboardData } from '@/lib/supabase/dashboards';
 import { EditDashboardDialog } from '@/components/dashboard/EditDashboardDialog';
+import { navigateToBoard, boardListHref } from '@/utils/routing';
 import { Button } from '@/components/ui/button';
 import { LayoutGrid, ArrowLeft, Loader2 } from 'lucide-react';
 
-export default function DashboardPage({
-  params,
-}: {
-  params: Promise<{ dashboardId: string }>;
-}) {
-  const { dashboardId } = use(params);
+/**
+ * Renders one board by slug, fetching it from Supabase in the browser.
+ *
+ * Rendering is driven by the hash fragment (see `src/utils/routing.ts`) rather than a
+ * path, so a statically exported site can address any board without a server.
+ */
+export default function BoardView({ dashboardId }: { dashboardId: string }) {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [supervisorMode, setSupervisorMode] = useState(false);
-  const router = useRouter();
   // Bumping this remounts <App>, which is how a re-fetched plan (and the tasks the
   // server re-anchored onto the new grid) replace the in-memory board.
   const [reloadKey, setReloadKey] = useState(0);
@@ -71,10 +71,10 @@ export default function DashboardPage({
           </div>
           <div className="flex items-center justify-center gap-3 pt-3">
             <Button asChild variant="outline" size="sm">
-              <Link href="/" className="gap-1.5">
+              <a href={boardListHref()} className="gap-1.5">
                 <ArrowLeft className="size-4" />
                 All Boards
-              </Link>
+              </a>
             </Button>
           </div>
         </div>
@@ -94,7 +94,7 @@ export default function DashboardPage({
       supervisorMode={supervisorMode}
       onSupervisorModeChange={setSupervisorMode}
       showBackButton={true}
-      backHref="/"
+      backHref={boardListHref()}
       extraButton={
         <EditDashboardDialog
           dashboardId={dashboardId}
@@ -107,7 +107,7 @@ export default function DashboardPage({
               return;
             }
             if (newId !== dashboardId) {
-              router.push(`/${newId}`);
+              navigateToBoard(newId);
             } else {
               setData((prev) => prev ? { ...prev, title: newTitle } : prev);
             }

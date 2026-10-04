@@ -6,6 +6,9 @@ import { getAllDashboards, type DashboardSummary } from '@/lib/supabase/dashboar
 import { EditDashboardDialog } from '@/components/dashboard/EditDashboardDialog';
 import { CreateDashboardModal } from '@/components/dashboard/CreateDashboardModal';
 import { AppHeader } from '@/components/layout/AppHeader';
+import BoardView from '@/components/board/BoardView';
+import { useHashRoute } from '@/hooks/useHashRoute';
+import { boardHref, boardUrl } from '@/utils/routing';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/components/AuthProvider';
 import { formatBoardsHeadline } from '@/utils/headlines';
@@ -24,6 +27,19 @@ import {
 } from 'lucide-react';
 
 export default function HomePage() {
+  const { slug, ready } = useHashRoute();
+
+  // A hash route renders the board itself, which brings its own chrome.
+  if (!ready) {
+    return <main className="app flex h-screen w-screen items-center justify-center bg-background" />;
+  }
+  if (slug) {
+    return <BoardView key={slug} dashboardId={slug} />;
+  }
+  return <BoardList />;
+}
+
+function BoardList() {
   const { user } = useAuth();
   const canManage = Boolean(user);
   const [dashboards, setDashboards] = useState<DashboardSummary[]>([]);
@@ -68,8 +84,7 @@ export default function HomePage() {
   const handleCopyLink = (id: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    const url = `${window.location.origin}/${id}`;
-    navigator.clipboard.writeText(url);
+    navigator.clipboard.writeText(boardUrl(id));
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
   };
@@ -146,7 +161,7 @@ export default function HomePage() {
                       </h2>
                       <div className="flex items-center gap-1.5 mt-1">
                         <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-muted text-muted-foreground font-medium">
-                          /{board.id}
+                          {`#/${board.id}`}
                         </span>
                         {board.is_public && (
                           <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">
@@ -231,10 +246,10 @@ export default function HomePage() {
                 {/* Open Board Action */}
                 <div className="pt-4 mt-3 border-t border-border/50">
                   <Button asChild size="sm" className="w-full justify-between group/btn">
-                    <Link href={`/${board.id}`}>
+                    <a href={boardHref(board.id)}>
                       <span>Open Board</span>
                       <ArrowRight className="size-4 transition-transform group-hover/btn:translate-x-0.5" />
-                    </Link>
+                    </a>
                   </Button>
                 </div>
               </div>

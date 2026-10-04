@@ -6,6 +6,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { createDashboard } from '@/lib/supabase/dashboards';
 import { slugify } from '@/utils/slugify';
 import { TIME_UNITS, TIME_UNIT_DEFINITIONS, getDefaultTimelineConfig } from '@/utils/timeUnits';
+import { navigateToBoard } from '@/utils/routing';
 import type { TimeUnit } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Plus, LayoutGrid } from 'lucide-react';
@@ -52,8 +53,12 @@ export function CreateDashboardModal({ trigger }: CreateDashboardModalProps = {}
     setOpen(false);
     setTitle('');
     setUnit('hours');
-    router.push(`/${res.dashboardId}`);
-    router.refresh();
+
+    // Hash route, not a path: a static export has no file at /<slug>. The id is only
+    // absent if creation reported success without one, which the write path prevents.
+    if (res.dashboardId) {
+      navigateToBoard(res.dashboardId);
+    }
   };
 
   if (!user) {

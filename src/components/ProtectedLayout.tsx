@@ -1,20 +1,21 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
-import { createClient } from '@/lib/supabase/client';
+import { currentHref } from '@/utils/routing';
 
 export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const pathname = usePathname();
 
   useEffect(() => {
     if (!loading && !user) {
-      router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
+      // Carry the current hash route, not the pathname: the board being viewed lives
+      // in the fragment, which usePathname would drop.
+      router.push(`/login?redirect=${encodeURIComponent(currentHref())}`);
     }
-  }, [user, loading, router, pathname]);
+  }, [user, loading, router]);
 
   if (loading || !user) {
     return null;

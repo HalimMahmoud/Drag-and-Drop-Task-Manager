@@ -21,6 +21,7 @@ interface AppProps {
   supervisorMode: boolean;
   onSupervisorModeChange: (value: boolean) => void;
   showBackButton?: boolean;
+  /** Hash route for the back link. See `src/utils/routing.ts`. */
   backHref?: string;
   extraButton?: React.ReactNode;
 }
@@ -34,7 +35,7 @@ export default function App({
   supervisorMode,
   onSupervisorModeChange,
   showBackButton = false,
-  backHref = '/',
+  backHref = '#/',
   extraButton,
 }: AppProps) {
   const { user } = useAuth();

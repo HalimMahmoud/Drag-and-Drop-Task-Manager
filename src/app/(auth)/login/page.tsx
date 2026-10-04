@@ -2,15 +2,15 @@
 
 import { useState } from 'react';
 import { Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { authCallbackUrl, currentHref, goToTarget, safeRedirectTarget } from '@/utils/routing';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 
 function LoginPageContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -18,7 +18,8 @@ function LoginPageContent() {
   const [error, setError] = useState<string | null>(null);
   const [isSignUp, setIsSignUp] = useState(false);
 
-  const redirectTo = searchParams.get('redirect') || '/';
+  // Return to whatever the visitor was looking at, not just the board list.
+const redirectTo = safeRedirectTarget(searchParams.get('redirect') ?? currentHref());
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,8 +42,7 @@ function LoginPageContent() {
           password,
         });
         if (error) throw error;
-        router.push(redirectTo);
-        router.refresh();
+        goToTarget(redirectTo);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -58,7 +58,7 @@ function LoginPageContent() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=${redirectTo}`,
+        redirectTo: authCallbackUrl(redirectTo),
       },
     });
 
