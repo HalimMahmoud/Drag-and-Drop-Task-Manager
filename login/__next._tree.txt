@@ -1,0 +1,3 @@
+:HL["/Drag-and-Drop-Task-Manager/_next/static/chunks/2w3wz4c-6z9c6.css","style"]
+:HC["/",""]
+0:{"tree":{"name":"","param":null,"prefetchHints":4176,"slots":{"children":{"name":"(auth)","param":null,"prefetchHints":4192,"slots":{"children":{"name":"login","param":null,"prefetchHints":4192,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":4256,"slots":null}}}}}}},"staleTime":300,"buildId":"Xuo0u5ed340hUDYCit4Nd"}
