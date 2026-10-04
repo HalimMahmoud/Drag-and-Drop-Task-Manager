@@ -86,6 +86,14 @@
     font-size: 13px !important;
   }
 
+  /* One row for both bounds plus their dash, so they stay visually paired. */
+  .timeline-range__window {
+    display: inline-flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 8px;
+  }
+
   .timeline-range__hint,
   .timeline-range__hidden {
     color: var(--color-muted-foreground);

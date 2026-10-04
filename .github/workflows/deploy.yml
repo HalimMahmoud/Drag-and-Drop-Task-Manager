@@ -7,9 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 # Never let two deploys race. In-progress runs are cancelled so the newest commit wins.
 concurrency:
@@ -21,7 +19,7 @@ env:
 
 jobs:
   build:
-    name: Export static site
+    name: Build and publish to gh-pages
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -34,8 +32,7 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        # `npm ci` needs package-lock.json, which is committed on purpose.
-        run: npm ci
+        run: npm install
 
       - name: Typecheck
         run: npm run typecheck
@@ -43,11 +40,7 @@ jobs:
       - name: Unit tests
         run: npm test
 
-      - name: Configure Pages
-        id: pages
-        uses: actions/configure-pages@v5
-
-      - name: Export with real Supabase credentials
+      - name: Export the static site into out/
         # The app is fully client-side, so these two values are baked into the
         # published JavaScript. They are the public/publishable keys only; never
         # expose the service-role key here.
@@ -59,22 +52,13 @@ jobs:
           NEXT_PUBLIC_BASE_PATH: ${{ vars.NEXT_PUBLIC_BASE_PATH }}
         run: npm run build
 
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Publish to the gh-pages branch
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          path: out
-
-  deploy:
-    name: Publish
-    needs: build
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
-    steps:
-      - name: Deploy
-        id: deployment
-        uses: actions/deploy-pages@v4
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./out
+          # Keep one published copy so the branch history stays readable.
+          publish_branch: gh-pages
+          user_name: github-actions[bot]
+          user_email: github-actions[bot]@users.noreply.github.com
+          commit_message: 'Deploy ${{ github.sha }}'

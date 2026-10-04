@@ -73,7 +73,9 @@ function SelectContent({
           {...props}
         >
           <SelectScrollUpButton />
-          <SelectPrimitive.List>{children}</SelectPrimitive.List>
+          {/* The list is the scroll container, so it is what has to stop the wheel from
+              chaining to the page once a long option list reaches its end. */}
+          <SelectPrimitive.List className="overscroll-contain">{children}</SelectPrimitive.List>
           <SelectScrollDownButton />
         </SelectPrimitive.Popup>
       </SelectPrimitive.Positioner>

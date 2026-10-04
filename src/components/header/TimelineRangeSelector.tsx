@@ -46,21 +46,25 @@ export default function TimelineRangeSelector({
       <TimeUnitTabs unit={unit} onSelect={handleUnitChange} />
 
       <span className="timeline-range__label">{singular} range</span>
-      <SlotSelect
-        label="Timeline start"
-        value={startSlot}
-        slots={allSlots.filter((slot) => slot < endSlot)}
-        unit={unit}
-        onChange={(slot) => updateConfig({ ...timelineConfig, startSlot: slot })}
-      />
-      <span aria-hidden="true">&ndash;</span>
-      <SlotSelect
-        label="Timeline end"
-        value={endSlot}
-        slots={allSlots.filter((slot) => slot > startSlot)}
-        unit={unit}
-        onChange={(slot) => updateConfig({ ...timelineConfig, endSlot: slot })}
-      />
+      {/* Kept in one non-wrapping group so the dash cannot strand itself on its own
+          line and leave the two bounds stacked instead of side by side. */}
+      <div className="timeline-range__window">
+        <SlotSelect
+          label="Timeline start"
+          value={startSlot}
+          slots={allSlots.filter((slot) => slot < endSlot)}
+          unit={unit}
+          onChange={(slot) => updateConfig({ ...timelineConfig, startSlot: slot })}
+        />
+        <span aria-hidden="true">&ndash;</span>
+        <SlotSelect
+          label="Timeline end"
+          value={endSlot}
+          slots={allSlots.filter((slot) => slot > startSlot)}
+          unit={unit}
+          onChange={(slot) => updateConfig({ ...timelineConfig, endSlot: slot })}
+        />
+      </div>
 
       <span className="timeline-range__hint">
         {formatUnitCount(endSlot - startSlot, unit)} / {formatUnitCount(maxSlots, unit)} max
